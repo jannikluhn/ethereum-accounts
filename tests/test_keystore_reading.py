@@ -16,18 +16,66 @@ from eth_accounts import (
     private_key_to_public_key,
     public_key_from_keystore,
     DecryptionError,
+    InvalidKeystore,
     MissingAddress,
+    UnsupportedKeystore,
 )
 
-official_test_path = os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                                  'official_keystore_tests.json')
-official_tests = json.load(open(official_test_path))
+testdata_directory = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'testdata')
+valid_test_vector_files = [
+    'official_keystore_tests'
+    'geth/v2_test_vector.json'
+]
+failing_test_vector_files = [
+    ('geth/v1_test_vector.json', UnsupportedKeystore),
+]
+plain_valid_keystores = [
+    {
+        'path': 'geth/very-light-scrypt',
+        'password': b'',
+        'address': '0x45dea0fb0bba44f4fcf290bba71fd57d7117cbb8',
+    },
+    {
+        'path': 'geth/aaa',
+        'password': b'foobar',
+        'address': '0xf466859ead1932d743d622cb74fc058882e8648a',
+    },
+    {
+        'path': 'geth/zzz',
+        'password': b'foobar',
+        'address': '0x289d485d9771714cce91d3393d764e1311907acc',
+    },
+    {
+        'path': 'geth/UTC--2016-03-22T12-57-55.920751759Z--7ef5a6135f1fd6a02593eedc869c6d41d934aef8',
+        'password': b'foobar',
+        'address': '0x7ef5a6135f1fd6a02593eedc869c6d41d934aef8',
+    },
+    {
+        'path': 'geth/no-address',
+        'password': b'foobar',
+        'address': '0xf466859ead1932d743d622cb74fc058882e8648a',
+    }
+]
+plain_invalid_keystores = [
+    {
+        'path': 'geth/garbage',
+        'error': InvalidKeystore,
+    },
+    {
+        'path': 'geth/empty',
+        'error': InvalidKeystore,
+    },
+    {
+        'path': 'geth/empty',
+        'error': InvalidKeystore,
+    }
+]
 
 
 @pytest.mark.parametrize('keystore_dict,password,private_key', [
     (d['json'], d['password'], d['priv']) for d in official_tests.values()
 ])
-def test_official_reading(keystore_dict, password, private_key):
+def test_vector_reading(keystore_dict, password, private_key):
     # should recover correct private key
     extracted_private_key = private_key_from_keystore(keystore_dict, force_bytes(password))
     assert extracted_private_key == private_key
