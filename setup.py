@@ -13,6 +13,7 @@ setup(
 
     packages=find_packages(),
     install_requires=[
+        'coincurve',
         'ethereum-utils>=0.1.0',
         'pycrypto',
         'scrypt'
