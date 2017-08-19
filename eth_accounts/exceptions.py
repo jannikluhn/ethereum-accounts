@@ -12,3 +12,7 @@ class InvalidKeystore(EthereumAccountException, ValueError):
 
 class UnsupportedKeystore(EthereumAccountException, ValueError):
     pass
+
+
+class MissingAddress(EthereumAccountException, KeyError):
+    pass

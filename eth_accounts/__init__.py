@@ -2,6 +2,7 @@ from .exceptions import (
     EthereumAccountException,
     DecryptionError,
     InvalidKeystore,
+    MissingAddress,
     UnsupportedKeystore,
 )
 

@@ -10,6 +10,7 @@ from eth_utils import (
     decode_hex,
     is_hex,
     remove_0x_prefix,
+    to_checksum_address,
     keccak
 )
 import scrypt
@@ -17,9 +18,11 @@ import scrypt
 from .exceptions import (
     DecryptionError,
     InvalidKeystore,
+    MissingAddress,
     UnsupportedKeystore,
 )
 from .utils import (
+    private_key_to_address,
     private_key_to_public_key,
 )
 
@@ -221,13 +224,28 @@ def public_key_from_keystore(keystore, password):
     return public_key
 
 
-def address_from_keystore(keystore):
+def address_from_keystore(keystore, password=None):
     """Extract the address from a keystore.
 
+    If no password is given, it will look for an `address` field in the keystore. If this is not
+    found a `MissingAddress` exception is raised. With a valid password, the private key will be
+    decrypted and used to infer the address.
+
     :param keystore: the keystore, either as a file-like object, a dictionary or a JSON string
+    :param password: the password decrypting the keystore, or `None`
     :returns: the hex encoded, '0x'-prefixed address
     """
-    pass
+    if password is None:
+        keystore_dict = parse_keystore(keystore)
+        try:
+            address = keystore_dict['address']
+        except KeyError:
+            raise MissingAddress('Keystore does not contain exposed address')
+        return to_checksum_address(address)
+    else:
+        validate_password(password)
+        private_key = private_key_from_keystore(keystore, password)
+        return private_key_to_address(private_key)
 
 
 def save_keystore(private_key, password, file):
