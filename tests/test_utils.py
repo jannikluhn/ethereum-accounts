@@ -10,7 +10,9 @@ from eth_utils import (
     encode_hex,
     decode_hex,
     is_0x_prefixed,
+    is_checksum_address,
     is_hex,
+    is_same_address,
 )
 
 from eth_accounts import (
@@ -48,6 +50,7 @@ def test_private_key_to_address(key):
     assert is_0x_prefixed(address)
     assert is_hex(address)
     assert len(address) == 40 + 2
-    assert address == reference
-    assert private_key_to_address(decode_hex(key)) == reference
-    assert private_key_to_address(add_0x_prefix(key)) == reference
+    assert is_same_address(address, reference)
+    assert is_same_address(private_key_to_address(decode_hex(key)), reference)
+    assert is_same_address(private_key_to_address(add_0x_prefix(key)), reference)
+    assert is_checksum_address(address)

@@ -5,6 +5,7 @@ from eth_utils import (
     is_hex,
     keccak,
     remove_0x_prefix,
+    to_checksum_address,
 )
 
 
@@ -41,5 +42,5 @@ def private_key_to_address(private_key):
     """
     public_key = private_key_to_public_key(private_key)
     public_key_hash = keccak(decode_hex(public_key)[1:])
-    address = encode_hex(public_key_hash[12:])
+    address = to_checksum_address(public_key_hash[12:])
     return address
