@@ -7,6 +7,7 @@ from .exceptions import (
 )
 
 from .keystore import (
+    Account,
     private_key_from_keystore,
     public_key_from_keystore,
     address_from_keystore,

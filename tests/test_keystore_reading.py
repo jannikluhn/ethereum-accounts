@@ -72,6 +72,10 @@ plain_invalid_keystores = [
 ]
 
 
+def test_plain_invalid_keystores(path, error):
+    pass
+
+
 @pytest.mark.parametrize('keystore_dict,password,private_key', [
     (d['json'], d['password'], d['priv']) for d in official_tests.values()
 ])
