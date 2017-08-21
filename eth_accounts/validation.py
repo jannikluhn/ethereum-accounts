@@ -1,6 +1,11 @@
 from collections import Mapping
 
-from eth_utils import is_hex
+from eth_utils import (
+    is_checksum_address,
+    is_checksum_formatted_address,
+    is_hex,
+    is_hex_address,
+)
 
 from .exceptions import (
     InvalidKeystore,
@@ -9,6 +14,7 @@ from .exceptions import (
 
 
 def validate_keystore(keystore):
+    """Validate a keystore in dictionary format. Superfluous keys are allowed."""
     if 'version' not in keystore:
         raise InvalidKeystore('no version specified')
     version = keystore['version']
@@ -49,8 +55,18 @@ def validate_keystore(keystore):
     if 'iv' not in cipher_params:
         raise InvalidKeystore('no key derivation initialization vector')
 
+    # if address is provided it must be hex encoded and (if ERC55 encoded) the checksum must be
+    # correct
+    if 'address' in keystore:
+        address = keystore['address']
+        if not is_hex_address(address):
+            raise InvalidKeystore('address specified in invalid format')
+        if is_checksum_formatted_address(address) and not is_checksum_address(address):
+            raise InvalidKeystore('address has wrong checksum')
+
 
 def validate_pbkdf2_params(kdf_params):
+    """Ensure that all parameters for PBKDF2 are provided and that they are valid."""
     required_kdf_params = {
         'prf': 'pseudorandom function',
         'c': 'iteration number',
@@ -78,6 +94,7 @@ def validate_pbkdf2_params(kdf_params):
 
 
 def validate_scrypt_params(kdf_params):
+    """Ensure that all parameters for Scrypt are provided and that they are valid."""
     required_kdf_params = {
         'dklen': 'key length',
         'n': 'cost parameter N',
@@ -114,5 +131,9 @@ def validate_scrypt_params(kdf_params):
 
 
 def validate_password(password):
+    """Validate a password.
+
+    Passwords must have the type `bytes`.
+    """
     if not isinstance(password, bytes):
         raise TypeError('password must be bytes')
