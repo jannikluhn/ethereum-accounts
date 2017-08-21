@@ -11,12 +11,14 @@ from eth_utils import (
     is_hex,
     keccak,
     remove_0x_prefix,
+    to_checksum_address,
 )
 import scrypt
 
 from .exceptions import (
     AccountLocked,
     DecryptionError,
+    MissingAddress,
 )
 from .utils import (
     private_key_to_address,
@@ -119,6 +121,13 @@ class KeystoreAccount(Account):
     def lock(self):
         self._private_key = None
         self._locked = True
+
+    @property
+    def exposed_address(self):
+        try:
+            return to_checksum_address(self.keystore_dict['address'])
+        except KeyError:
+            raise MissingAddress('no address in keystore')
 
     def _extract_private_key(self, password):
         validate_password(password)
