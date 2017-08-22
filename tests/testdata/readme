@@ -1,0 +1,2 @@
+pbkdf2_keystore_template.json and scrypt_keystore_template.json generated with ethereumjs-wallet
+version 0.6.0, password: `password`

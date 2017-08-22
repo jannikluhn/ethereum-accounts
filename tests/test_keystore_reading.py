@@ -1,116 +1,158 @@
 import pytest
+import copy
 import json
 import os
 from io import StringIO
 
 from eth_utils import (
+    add_0x_prefix,
     force_bytes,
     is_checksum_address,
     is_same_address,
 )
 
 from eth_accounts import (
-    address_from_keystore,
-    private_key_to_address,
-    private_key_from_keystore,
-    private_key_to_public_key,
-    public_key_from_keystore,
+    Account,
     DecryptionError,
     InvalidKeystore,
     MissingAddress,
     UnsupportedKeystore,
 )
 
+
 testdata_directory = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'testdata')
-valid_test_vector_files = [
-    'official_keystore_tests'
-    'geth/v2_test_vector.json'
-]
-failing_test_vector_files = [
-    ('geth/v1_test_vector.json', UnsupportedKeystore),
-]
-plain_valid_keystores = [
-    {
-        'path': 'geth/very-light-scrypt',
-        'password': b'',
-        'address': '0x45dea0fb0bba44f4fcf290bba71fd57d7117cbb8',
-    },
-    {
-        'path': 'geth/aaa',
-        'password': b'foobar',
-        'address': '0xf466859ead1932d743d622cb74fc058882e8648a',
-    },
-    {
-        'path': 'geth/zzz',
-        'password': b'foobar',
-        'address': '0x289d485d9771714cce91d3393d764e1311907acc',
-    },
-    {
-        'path': 'geth/UTC--2016-03-22T12-57-55.920751759Z--7ef5a6135f1fd6a02593eedc869c6d41d934aef8',
-        'password': b'foobar',
-        'address': '0x7ef5a6135f1fd6a02593eedc869c6d41d934aef8',
-    },
-    {
-        'path': 'geth/no-address',
-        'password': b'foobar',
-        'address': '0xf466859ead1932d743d622cb74fc058882e8648a',
-    }
-]
-plain_invalid_keystores = [
-    {
-        'path': 'geth/garbage',
-        'error': InvalidKeystore,
-    },
-    {
-        'path': 'geth/empty',
-        'error': InvalidKeystore,
-    },
-    {
-        'path': 'geth/empty',
-        'error': InvalidKeystore,
-    }
-]
+official_test_vector_path = os.path.join(testdata_directory, 'official_keystore_tests.json')
+pbkdf2_keystore_template_path = os.path.join(testdata_directory, 'pbkdf2_keystore_template.json')
+scrypt_keystore_template_path = os.path.join(testdata_directory, 'scrypt_keystore_template.json')
 
 
-def test_plain_invalid_keystores(path, error):
-    pass
+def test_official_vectors():
+    tests = json.load(open(official_test_vector_path))
+    for name, test in tests.items():
+        keystore = test['json']
+        password = force_bytes(test['password'])
+        private_key = add_0x_prefix(test['priv'])
+
+        account = Account.from_keystore(keystore)
+        account.unlock(password)
+        assert account.private_key == private_key
+
+        with pytest.raises(MissingAddress):
+            account.exposed_address
 
 
-@pytest.mark.parametrize('keystore_dict,password,private_key', [
-    (d['json'], d['password'], d['priv']) for d in official_tests.values()
-])
-def test_vector_reading(keystore_dict, password, private_key):
-    # should recover correct private key
-    extracted_private_key = private_key_from_keystore(keystore_dict, force_bytes(password))
-    assert extracted_private_key == private_key
-    # should recover correct public key
-    extracted_public_key = public_key_from_keystore(keystore_dict, force_bytes(password))
-    assert extracted_public_key == private_key_to_public_key(private_key)
-    # should fail with wrong password
-    with pytest.raises(DecryptionError):
-        private_key_from_keystore(keystore_dict, force_bytes(password * 2))
+@pytest.fixture
+def pbkdf2_keystore_template():
+    with open(pbkdf2_keystore_template_path) as f:
+        d = json.load(f)
+    return d
 
 
-@pytest.mark.parametrize('keystore_dict,password,private_key', [
-    (d['json'], d['password'], d['priv']) for d in official_tests.values()
-])
-def test_official_reading_filelike(keystore_dict, password, private_key):
-    f = StringIO(json.dumps(keystore_dict))
-    assert private_key_from_keystore(f, force_bytes(password)) == private_key
+@pytest.fixture
+def scrypt_keystore_template():
+    with open(scrypt_keystore_template_path) as f:
+        d = json.load(f)
+    return d
 
 
-@pytest.mark.parametrize('keystore_dict,password,private_key', [
-    (d['json'], d['password'], d['priv']) for d in official_tests.values()
-])
-def test_address_recovery(keystore_dict, password, private_key):
-    try:
-        address = address_from_keystore(keystore_dict)
-    except MissingAddress:
-        assert 'address' not in keystore_dict
-    else:
-        assert is_same_address(address, private_key_to_address(private_key))
-        assert is_checksum_address(address)
+def test_exposed_address(pbkdf2_keystore_template):
+    account = Account.from_keystore(pbkdf2_keystore_template)
+    exposed_address = account.exposed_address
+    assert is_checksum_address(exposed_address)
+    assert is_same_address(exposed_address, pbkdf2_keystore_template['address'])
 
-    address = address_from_keystore(keystore_dict, force_bytes(password))
-    assert is_same_address(address, private_key_to_address(private_key))
-    assert is_checksum_address(address)
+
+def test_missing_address(pbkdf2_keystore_template):
+    pbkdf2_keystore_template.pop('address')
+    account = Account.from_keystore(pbkdf2_keystore_template)
+    with pytest.raises(MissingAddress):
+        account.exposed_address
+
+
+def test_missing_crypto(pbkdf2_keystore_template):
+    pbkdf2_keystore_template.pop('crypto')
+    with pytest.raises(InvalidKeystore):
+        Account.from_keystore(pbkdf2_keystore_template)
+
+
+def test_missing_version(pbkdf2_keystore_template):
+    pbkdf2_keystore_template.pop('version')
+    with pytest.raises(InvalidKeystore):
+        Account.from_keystore(pbkdf2_keystore_template)
+
+
+def test_version(pbkdf2_keystore_template):
+    invalid_versions = ['', 'three', '3.0', 3, 2, 1, 4, '-1', '0', ' 3', '3 ', '3\n']
+    for version in invalid_versions:
+        pbkdf2_keystore_template['version'] = version
+        with pytest.raises(InvalidKeystore):
+            Account.from_keystore(pbkdf2_keystore_template)
+    unsupported_versions = ['1', '2', '4', '0']
+    for version in unsupported_versions:
+        pbkdf2_keystore_template['version'] = version
+        with pytest.raises(UnsupportedKeystore):
+            Account.from_keystore(pbkdf2_keystore_template)
+
+
+def test_unknown_cipher(pbkdf2_keystore_template):
+    unkown_ciphers = ['aes-128-ctr'.upper(), 'aes-256-ctr', 'aes-128-cbc', 'des-128-ctr', '']
+    for cipher in unkown_ciphers:
+        pbkdf2_keystore_template['crypto']['cipher'] = cipher
+        with pytest.raises(UnsupportedKeystore):
+            Account.from_keystore(pbkdf2_keystore_template)
+
+
+def test_missing_iv_param(pbkdf2_keystore_template):
+    pbkdf2_keystore_template['crypto']['cipherparams'].pop('iv')
+    with pytest.raises(InvalidKeystore):
+        Account.from_keystore(pbkdf2_keystore_template)
+
+
+def test_missing_ciphertext(pbkdf2_keystore_template):
+    pbkdf2_keystore_template['crypto'].pop('ciphertext')
+    with pytest.raises(InvalidKeystore):
+        Account.from_keystore(pbkdf2_keystore_template)
+
+
+def test_missing_kdf(pbkdf2_keystore_template):
+    pbkdf2_keystore_template['crypto'].pop('kdf')
+    with pytest.raises(InvalidKeystore):
+        Account.from_keystore(pbkdf2_keystore_template)
+
+
+def test_unknown_kdf(pbkdf2_keystore_template):
+    unkown_kdfs = ['', 'test', 'SCRYPT', 'PBKDF2']
+    for kdf in unkown_kdfs:
+        pbkdf2_keystore_template['crypto']['kdf'] = kdf
+        with pytest.raises(UnsupportedKeystore):
+            Account.from_keystore(pbkdf2_keystore_template)
+
+
+def test_missing_mac(pbkdf2_keystore_template):
+    pbkdf2_keystore_template['crypto'].pop('mac')
+    with pytest.raises(InvalidKeystore):
+        Account.from_keystore(pbkdf2_keystore_template)
+
+
+def test_missing_kdf_params(pbkdf2_keystore_template):
+    pbkdf2_keystore_template['crypto'].pop('kdfparams')
+    with pytest.raises(InvalidKeystore):
+        Account.from_keystore(pbkdf2_keystore_template)
+
+
+def test_missing_pbkdf2_params(pbkdf2_keystore_template):
+    params = ['c', 'dklen', 'prf', 'salt']
+    for param in params:
+        d = copy.deepcopy(pbkdf2_keystore_template)
+        d['crypto']['kdfparams'].pop(param)
+        with pytest.raises(InvalidKeystore):
+            Account.from_keystore(d)
+
+
+def test_missing_scrypt_params(scrypt_keystore_template):
+    params = ['dklen', 'n', 'p', 'r', 'salt']
+    for param in params:
+        d = copy.deepcopy(scrypt_keystore_template)
+        d['crypto']['kdfparams'].pop(param)
+        with pytest.raises(InvalidKeystore):
+            Account.from_keystore(d)

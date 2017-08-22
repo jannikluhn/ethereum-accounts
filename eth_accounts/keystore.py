@@ -21,6 +21,7 @@ from .exceptions import (
     MissingAddress,
 )
 from .utils import (
+    normalize_private_key,
     private_key_to_address,
     private_key_to_public_key,
 )
@@ -33,21 +34,17 @@ from .validation import (
 class Account(object):
     """An externally controlled Ethereum account."""
 
-    def __init__(self, private_key, locked=False):
-        if is_hex(private_key):
-            self._private_key = remove_0x_prefix(private_key)
-        else:
-            self._private_key = remove_0x_prefix(encode_hex(private_key))
+    def __init__(self):
+        self._private_key = None
         self._public_key = None
         self._address = None
         self._locked = True
-        if not locked:
-            # forces derivation of public key and address
-            self.unlock()
 
     @classmethod
     def from_private_key(cls, private_key):
-        return cls(private_key)
+        account = cls()
+        account._private_key = normalize_private_key(private_key)
+        account.unlock()  # trigger derivation of public key and address
 
     @classmethod
     def from_keystore(cls, keystore, password=None):
@@ -109,7 +106,7 @@ class Account(object):
 class KeystoreAccount(Account):
 
     def __init__(self, keystore, password=None):
-        super().__init__(None, locked=True)
+        super().__init__()
         self.keystore_dict = parse_keystore(keystore)
         if password is not None:
             self.unlock(password)
