@@ -55,6 +55,38 @@ def scrypt_keystore_template():
     return d
 
 
+def test_account_locked_without_password(pbkdf2_keystore_template):
+    account = Account.from_keystore(pbkdf2_keystore_template)
+    assert account.is_locked()
+
+
+def test_account_unlocked_with_password(pbkdf2_keystore_template):
+    account = Account.from_keystore(pbkdf2_keystore_template, b'password')
+    assert not account.is_locked()
+
+
+def test_account_unlockable_with_password(pbkdf2_keystore_template):
+    account = Account.from_keystore(pbkdf2_keystore_template)
+    account.unlock(b'password')
+    assert not account.is_locked()
+
+
+def test_account_unlocking_fails_with_wrong_password(pbkdf2_keystore_template):
+    account = Account.from_keystore(pbkdf2_keystore_template)
+    wrong_passwords = [b'', b'asdf', b'PASSWORD']
+    for password in wrong_passwords:
+        with pytest.raises(DecryptionError):
+            account.unlock(password)
+
+
+def test_account_password_type_checks(pbkdf2_keystore_template):
+    account = Account.from_keystore(pbkdf2_keystore_template)
+    invalid_passwords = ['password', 123, None, pbkdf2_keystore_template]
+    for password in invalid_passwords:
+        with pytest.raises(TypeError):
+            account.unlock(password)
+
+
 def test_exposed_address(pbkdf2_keystore_template):
     account = Account.from_keystore(pbkdf2_keystore_template)
     exposed_address = account.exposed_address
