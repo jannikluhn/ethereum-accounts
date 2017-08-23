@@ -1,5 +1,4 @@
 from collections import Mapping
-from hashlib import pbkdf2_hmac
 from io import IOBase
 import json
 
@@ -8,16 +7,19 @@ from Crypto.Util import Counter
 from eth_utils import (
     encode_hex,
     decode_hex,
-    is_hex,
     keccak,
-    remove_0x_prefix,
     to_checksum_address,
 )
-import scrypt
 
 from .exceptions import (
     AccountLocked,
     DecryptionError,
+    UnsupportedKeystore,
+)
+from .kdf import (
+    default_kdf_params,
+    kdf_param_validators,
+    kdfs,
 )
 from .utils import (
     normalize_private_key,
@@ -184,12 +186,8 @@ class KeystoreAccount(Account):
     def _derive_key(self, password):
         kdf_params = self.keystore_dict['crypto']['kdfparams']
         kdf = self.keystore_dict['crypto']['kdf']
-        if kdf == 'pbkdf2':
-            key = derive_pbkdf2_key(password, kdf_params)
-        elif kdf == 'scrypt':
-            key = derive_scrypt_key(password, kdf_params)
-        else:
-            assert False  # checked during validation
+        assert kdf in kdfs  # checked during validation
+        key = kdfs[kdf](password, kdf_params)
         return key
 
     def _validate_mac(self, key):
@@ -217,24 +215,6 @@ def parse_keystore(keystore):
             raise TypeError('expected mapping, file-like object, or string')
     validate_keystore(keystore_dict)
     return keystore_dict
-
-
-def derive_pbkdf2_key(password, params):
-    salt = decode_hex(params['salt'])
-    dklen = params['dklen']
-    iterations = params['c']
-    full_key = pbkdf2_hmac('sha256', password, salt, iterations, dklen)
-    assert len(full_key) == dklen
-    return full_key
-
-
-def derive_scrypt_key(password, params):
-    salt = decode_hex(params['salt'])
-    n = params['n']
-    r = params['r']
-    p = params['p']
-    dklen = params['dklen']
-    return scrypt.hash(password, salt, n, r, p, dklen)
 
 
 def decrypt_aes_ctr(ciphertext, key, params):
