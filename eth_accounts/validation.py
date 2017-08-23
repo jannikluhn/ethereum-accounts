@@ -18,9 +18,22 @@ def validate_keystore(keystore):
     if 'version' not in keystore:
         raise InvalidKeystore('no version specified')
     version = keystore['version']
-    if version != 3:
-        message = 'unknown keystore version {} (can only handle 3)'.format(version)
+    if isinstance(version, str):
+        try:
+            int_version = int(version)
+        except ValueError:
+            message = 'keystore version must be integer or integer representing string'
+            raise InvalidKeystore(message)
+    elif isinstance(version, int):
+        int_version = version
+    else:
+        raise InvalidKeystore('keystore version must be either integer or string')
+    if int_version <= 0:
+        raise InvalidKeystore('keystore version number must be positive')
+    if int_version != 3:
+        message = 'unknown keystore version {} (can only handle 3)'.format(int_version)
         raise UnsupportedKeystore(message)
+
     if 'crypto' not in keystore:
         raise InvalidKeystore('no crypto section')
 

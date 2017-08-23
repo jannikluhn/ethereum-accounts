@@ -24,9 +24,9 @@ from eth_accounts import (
 
 @pytest.mark.parametrize('key', [random_private_key() for _ in range(100)])
 def test_random_private_key(key):
-    assert not is_0x_prefixed(key)
     assert is_hex(key)
-    assert len(key) == 64
+    assert is_0x_prefixed(key)
+    assert len(key) == 64 + 2
 
 
 @pytest.mark.parametrize('key', [random_private_key() for _ in range(100)])

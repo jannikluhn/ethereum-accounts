@@ -82,12 +82,16 @@ def test_missing_version(pbkdf2_keystore_template):
 
 
 def test_version(pbkdf2_keystore_template):
-    invalid_versions = ['', 'three', '3.0', 3, 2, 1, 4, '-1', '0', ' 3', '3 ', '3\n']
+    valid_versions = [3, '3', ' 3', '3 ', '3\n']
+    for version in valid_versions:
+        pbkdf2_keystore_template['version'] = version
+        Account.from_keystore(pbkdf2_keystore_template)
+    invalid_versions = ['', 'three', '3.0', '3.', '-1', '0', -1, 0]
     for version in invalid_versions:
         pbkdf2_keystore_template['version'] = version
         with pytest.raises(InvalidKeystore):
             Account.from_keystore(pbkdf2_keystore_template)
-    unsupported_versions = ['1', '2', '4', '0']
+    unsupported_versions = ['1', '2', '4', 2, 1, 4]
     for version in unsupported_versions:
         pbkdf2_keystore_template['version'] = version
         with pytest.raises(UnsupportedKeystore):
