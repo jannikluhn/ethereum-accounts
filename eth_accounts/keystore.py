@@ -18,7 +18,6 @@ import scrypt
 from .exceptions import (
     AccountLocked,
     DecryptionError,
-    MissingAddress,
 )
 from .utils import (
     normalize_private_key,
@@ -124,7 +123,7 @@ class KeystoreAccount(Account):
         try:
             return to_checksum_address(self.keystore_dict['address'])
         except KeyError:
-            raise MissingAddress('no address in keystore')
+            return None
 
     def _extract_private_key(self, password):
         validate_password(password)

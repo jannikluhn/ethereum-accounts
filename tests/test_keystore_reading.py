@@ -15,7 +15,6 @@ from eth_accounts import (
     Account,
     DecryptionError,
     InvalidKeystore,
-    MissingAddress,
     UnsupportedKeystore,
 )
 
@@ -37,8 +36,7 @@ def test_official_vectors():
         account.unlock(password)
         assert account.private_key == private_key
 
-        with pytest.raises(MissingAddress):
-            account.exposed_address
+        assert account.exposed_address is None
 
 
 @pytest.fixture
@@ -97,8 +95,7 @@ def test_exposed_address(pbkdf2_keystore_template):
 def test_missing_address(pbkdf2_keystore_template):
     pbkdf2_keystore_template.pop('address')
     account = Account.from_keystore(pbkdf2_keystore_template)
-    with pytest.raises(MissingAddress):
-        account.exposed_address
+    assert account.exposed_address is None
 
 
 def test_missing_crypto(pbkdf2_keystore_template):
