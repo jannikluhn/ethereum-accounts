@@ -1,8 +1,11 @@
 from hashlib import pbkdf2_hmac
+import os
 
 from eth_utils import (
     decode_hex,
+    encode_hex,
     is_hex,
+    remove_0x_prefix,
 )
 import scrypt
 
@@ -23,6 +26,9 @@ def validate_pbkdf2_params(kdf_params):
     for key, name in required_kdf_params.items():
         if key not in kdf_params:
             raise InvalidKeystore('no {} specified'.format(name))
+    if len(kdf_params) > len(required_kdf_params):
+        too_many = set(kdf_params.keys()) - set(required_kdf_params)
+        raise InvalidKeystore('unnecessary PBKDF2 parameters ({})'.format(', '.join(too_many)))
     if kdf_params['prf'] != 'hmac-sha256':
         raise UnsupportedKeystore('unknown pseudorandom function in keystore')
     if not isinstance(kdf_params['c'], int):
@@ -52,6 +58,9 @@ def validate_scrypt_params(kdf_params):
     for key, name in required_kdf_params.items():
         if key not in kdf_params:
             raise InvalidKeystore('no {} specified'.format(name))
+    if len(kdf_params) > len(required_kdf_params):
+        too_many = set(kdf_params.keys()) - set(required_kdf_params)
+        raise InvalidKeystore('unnecessary scrypt parameters ({})'.format(', '.join(too_many)))
     if not isinstance(kdf_params['dklen'], int):
         raise InvalidKeystore('scrypt key length must be integer')
     if not isinstance(kdf_params['n'], int):
@@ -95,6 +104,25 @@ def derive_scrypt_key(password, params):
     return scrypt.hash(password, salt, n, r, p, dklen)
 
 
+def generate_pbkdf2_params():
+    return {
+        'dklen': 32,
+        'c': 262144,
+        'prf': 'hmac-sha256',
+        'salt': remove_0x_prefix(encode_hex(os.urandom(16))),
+    }
+
+
+def generate_scrypt_params():
+    return {
+        'dklen': 32,
+        'n': 262144,
+        'r': 1,
+        'p': 8,
+        'salt': remove_0x_prefix(encode_hex(os.urandom(16))),
+    }
+
+
 # make the functions accessible by name
 
 kdfs = {
@@ -107,13 +135,9 @@ kdf_param_validators = {
     'scrypt': validate_scrypt_params
 }
 
-default_kdf_params = {
-    'pbkdf2': {
-
-    },
-    'scrypt': {
-
-    }
+kdf_param_generators = {
+    'pbkdf2': generate_pbkdf2_params,
+    'scrypt': generate_scrypt_params,
 }
 
-assert set(kdfs.keys()) == set(kdf_param_validators.keys()) == set(default_kdf_params.keys())
+assert all(set(d.keys()) == set(kdfs.keys()) for d in [kdf_param_validators, kdf_param_generators])

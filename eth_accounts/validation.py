@@ -6,11 +6,15 @@ from eth_utils import (
     is_hex_address,
 )
 
+from .ciphers import (
+    ciphers,
+    cipher_param_validators,
+)
 from .exceptions import (
     InvalidKeystore,
     UnsupportedKeystore,
 )
-from .kdf import (
+from .kdfs import (
     kdf_param_validators,
     kdfs,
 )
@@ -64,13 +68,14 @@ def validate_keystore(keystore):
             raise InvalidKeystore('no {} specified'.format(name))
 
     # cipher
-    if crypto['cipher'] != 'aes-128-ctr':
+    cipher = crypto['cipher']
+    if cipher not in ciphers:
         raise UnsupportedKeystore('unknown cipher in keystore')
     cipher_params = crypto['cipherparams']
     if not isinstance(cipher_params, Mapping):
         raise InvalidKeystore('invalid format of cipher parameters in keystore')
-    if 'iv' not in cipher_params:
-        raise InvalidKeystore('no key derivation initialization vector')
+    validate_cipher_params = cipher_param_validators[cipher]
+    validate_cipher_params(cipher_params)
 
     # kdf
     kdf = crypto['kdf']
@@ -79,8 +84,8 @@ def validate_keystore(keystore):
     kdf_params = crypto['kdfparams']
     if not isinstance(kdf_params, Mapping):
         raise InvalidKeystore('invalid format of key derivation parameters in keystore')
-    validate = kdf_param_validators[kdf]
-    validate(kdf_params)
+    validate_kdf_params = kdf_param_validators[kdf]
+    validate_kdf_params(kdf_params)
 
     # address
     if 'address' in keystore:

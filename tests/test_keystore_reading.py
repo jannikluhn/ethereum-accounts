@@ -2,7 +2,6 @@ import pytest
 import copy
 import json
 import os
-from io import StringIO
 
 from eth_utils import (
     add_0x_prefix,

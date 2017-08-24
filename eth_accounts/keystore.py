@@ -2,22 +2,24 @@ from collections import Mapping
 from io import IOBase
 import json
 
-from Crypto.Cipher import AES
-from Crypto.Util import Counter
 from eth_utils import (
-    encode_hex,
     decode_hex,
+    encode_hex,
     keccak,
     to_checksum_address,
 )
 
+from .ciphers import (
+    cipher_param_validators,
+    ciphers,
+    decryptors,
+)
 from .exceptions import (
     AccountLocked,
     DecryptionError,
     UnsupportedKeystore,
 )
-from .kdf import (
-    default_kdf_params,
+from .kdfs import (
     kdf_param_validators,
     kdfs,
 )
@@ -179,28 +181,29 @@ class KeystoreAccount(Account):
         validate_password(password)
         key = self._derive_key(password)
         self._validate_mac(key)
-        ciphertext = decode_hex(self.keystore_dict['crypto']['ciphertext'])
-        params = self.keystore_dict['crypto']['cipherparams']
-        self._private_key = encode_hex(decrypt_aes_ctr(ciphertext, key[:16], params))
+        self._private_key = self._decrypt_private_key(key)
 
     def _derive_key(self, password):
-        kdf_params = self.keystore_dict['crypto']['kdfparams']
         kdf = self.keystore_dict['crypto']['kdf']
+        kdf_params = self.keystore_dict['crypto']['kdfparams']
         assert kdf in kdfs  # checked during validation
         key = kdfs[kdf](password, kdf_params)
         return key
 
     def _validate_mac(self, key):
         ciphertext = decode_hex(self.keystore_dict['crypto']['ciphertext'])
-        mac = keccak(key[16:32] + ciphertext)
+        mac = calculate_mac(key, ciphertext)
         if mac != decode_hex(self.keystore_dict['crypto']['mac']):
             raise DecryptionError('MAC mismatch')
 
     def _decrypt_private_key(self, key):
+        cipher = self.keystore_dict['crypto']['cipher']
         ciphertext = decode_hex(self.keystore_dict['crypto']['ciphertext'])
-        params = self.keystore_dict['crypto']['']
-        private_key = decrypt_aes_ctr(ciphertext, key[:16], params)
-        return private_key
+        assert cipher in ciphers  # checked during validation
+        params = self.keystore_dict['crypto']['cipherparams']
+        decrypt = decryptors[cipher]
+        private_key = decrypt(ciphertext, key[:16], params)
+        return encode_hex(private_key)
 
 
 def parse_keystore(keystore):
@@ -217,9 +220,5 @@ def parse_keystore(keystore):
     return keystore_dict
 
 
-def decrypt_aes_ctr(ciphertext, key, params):
-    iv = int.from_bytes(decode_hex(params['iv']), byteorder='big')
-    counter = Counter.new(128, initial_value=iv, allow_wraparound=True)
-    decryptor = AES.new(key, mode=AES.MODE_CTR, counter=counter)
-    private_key = decryptor.decrypt(ciphertext)
-    return private_key
+def calculate_mac(key, ciphertext):
+    return keccak(key[16:32] + ciphertext)
