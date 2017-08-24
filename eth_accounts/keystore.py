@@ -1,6 +1,7 @@
 from collections import Mapping
 from io import IOBase
 import json
+from uuid import uuid4
 
 from eth_utils import (
     decode_hex,
@@ -10,9 +11,11 @@ from eth_utils import (
 )
 
 from .ciphers import (
+    cipher_param_generators,
     cipher_param_validators,
     ciphers,
     decryptors,
+    encryptors,
 )
 from .exceptions import (
     AccountLocked,
@@ -20,6 +23,7 @@ from .exceptions import (
     UnsupportedKeystore,
 )
 from .kdfs import (
+    kdf_param_generators,
     kdf_param_validators,
     kdfs,
 )
@@ -147,11 +151,56 @@ class Account(object):
         """
         return self._locked
 
-    def to_keystore(self, f, password):
-        pass
+    def to_keystore(self, f, password, expose_address=True, uuid=True, kdf='scrypt',
+                    kdf_params=None, cipher='aes-128-ctr', cipher_params=None, pretty=True):
+        d = self.to_keystore_dict(password, expose_address, uuid, kdf, kdf_params,
+                                  cipher, cipher_params)
+        indent = 4 if pretty else None
+        json.dump(d, f, indent=indent)
 
-    def to_keystore_dict(self):
-        pass
+    def to_keystore_dict(self, password, expose_address=True, uuid=True, kdf='scrypt',
+                         kdf_params=None, cipher='aes-128-ctr', cipher_params=None):
+        private_key = self.private_key
+
+        if kdf not in kdfs:
+            raise UnsupportedKeystore('{} kdf not supported'.format(kdf))
+        kdf_params = {**kdf_param_generators[kdf](), **(kdf_params or {})}
+
+        if cipher not in ciphers:
+            raise UnsupportedKeystore('{} cipher not supported'.format(kdf))
+        cipher_params = {**cipher_param_generators[kdf](), **(cipher_params or {})}
+
+        validate_kdf_params = kdf_param_validators[kdf]
+        validate_kdf_params(kdf_params)
+        validate_cipher_params = cipher_param_validators[cipher]
+        validate_cipher_params(cipher_params)
+
+        key = kdfs[kdf](password, kdf_params)
+        ciphertext = encryptors[cipher](private_key, key, cipher_params)
+        mac = calculate_mac(key, ciphertext)
+
+        keystore_dict = {
+            'version': '3',
+            'crypto': {
+                'cipher': cipher,
+                'cipherparams': cipher_params,
+                'kdf': kdf,
+                'kdf_params': kdf_params,
+                'mac': mac,
+                'ciphertext': ciphertext,
+            },
+        }
+
+        if expose_address:
+            keystore_dict['address'] = self.address
+
+        if uuid is True:
+            keystore_dict['id'] = uuid4()
+            assert False  # TODO: find out correct format, should include timestamp
+        elif uuid is not None:
+            keystore_dict['id'] = uuid
+
+        return keystore_dict
 
 
 class KeystoreAccount(Account):
