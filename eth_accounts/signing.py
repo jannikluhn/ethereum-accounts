@@ -1,12 +1,34 @@
+from coincurve import PrivateKey
+
+from eth_utils import (
+    decode_hex,
+    encode_hex,
+    is_hex,
+    keccak,
+)
+
+
 def sign(private_key, message, hash=True):
     """Sign a message using a private key.
 
-    :param private_key: the private key that should be used to sign the message
-    :param message: the message to sign
+    :param private_key: the hex encoded private key that should be used to sign the message
+    :param message: the hex encoded message to sign
     :param hash: if true, the message will be hashed before signing it
     :returns: the hex encoded, '0x'-prefixed signature
     """
-    pass
+    if not is_hex(private_key):
+        raise TypeError('Private key must be hex encoded')
+    if not is_hex(message):
+        raise TypeError('Message must be hex encoded')
+
+    if hash:
+        to_sign = keccak(decode_hex(message))
+    else:
+        to_sign = decode_hex(message)
+
+    private_key_object = PrivateKey.from_hex(private_key)
+    signature = private_key_object.sign(to_sign, hasher=None)
+    return encode_hex(signature)
 
 
 def sign_transaction(private_key, transaction_dict):
@@ -28,7 +50,17 @@ def sign_ethereum_message(private_key, message):
     :param message: the message to sign
     :returns: the hex encoded, '0x'-prefixed signature
     """
-    pass
+    if not is_hex(private_key):
+        raise TypeError('Private key must be hex encoded')
+    if not is_hex(message):
+        raise TypeError('Message must be hex encoded')
+
+    message = decode_hex(message)
+    to_sign = keccak(b'\x19Ethereum Signed Message:\n' + str(len(message)) + message)
+
+    private_key_object = PrivateKey.from_hex(private_key)
+    signature = private_key_object.sign(to_sign, hasher=None)
+    return encode_hex(signature)
 
 
 def verify_signature(signature, message, address):
@@ -39,14 +71,3 @@ def verify_signature(signature, message, address):
     :param address: the address of the assumed owner
     :returns: `True` or `False`
     """
-
-
-# todo:
-
-
-def private_key_from_mnemoic(private_key, phrase):
-    pass
-
-
-def random_private_key():
-    pass
