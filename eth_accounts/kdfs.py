@@ -92,7 +92,7 @@ def derive_pbkdf2_key(password, params):
     iterations = params['c']
     full_key = pbkdf2_hmac('sha256', password, salt, iterations, dklen)
     assert len(full_key) == dklen
-    return full_key
+    return encode_hex(full_key)
 
 
 def derive_scrypt_key(password, params):
@@ -101,7 +101,7 @@ def derive_scrypt_key(password, params):
     r = params['r']
     p = params['p']
     dklen = params['dklen']
-    return scrypt.hash(password, salt, n, r, p, dklen)
+    return encode_hex(scrypt.hash(password, salt, n, r, p, dklen))
 
 
 def generate_pbkdf2_params():

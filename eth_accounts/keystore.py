@@ -6,6 +6,7 @@ from uuid import uuid4
 from eth_utils import (
     decode_hex,
     encode_hex,
+    is_hex,
     keccak,
     to_checksum_address,
 )
@@ -31,6 +32,7 @@ from .utils import (
     normalize_private_key,
     private_key_to_address,
     private_key_to_public_key,
+    random_private_key,
 )
 from .validation import (
     validate_keystore,
@@ -180,7 +182,7 @@ class Account(object):
 
         if cipher not in ciphers:
             raise UnsupportedKeystore('{} cipher not supported'.format(kdf))
-        cipher_params = {**cipher_param_generators[kdf](), **(cipher_params or {})}
+        cipher_params = {**cipher_param_generators[cipher](), **(cipher_params or {})}
 
         validate_kdf_params = kdf_param_validators[kdf]
         validate_kdf_params(kdf_params)
@@ -188,7 +190,7 @@ class Account(object):
         validate_cipher_params(cipher_params)
 
         key = kdfs[kdf](password, kdf_params)
-        ciphertext = encryptors[cipher](private_key, key, cipher_params)
+        ciphertext = encryptors[cipher](private_key, key[:32 + 2], cipher_params)
         mac = calculate_mac(key, ciphertext)
 
         keystore_dict = {
@@ -197,7 +199,7 @@ class Account(object):
                 'cipher': cipher,
                 'cipherparams': cipher_params,
                 'kdf': kdf,
-                'kdf_params': kdf_params,
+                'kdfparams': kdf_params,
                 'mac': mac,
                 'ciphertext': ciphertext,
             },
@@ -261,19 +263,19 @@ class KeystoreAccount(Account):
         return key
 
     def _validate_mac(self, key):
-        ciphertext = decode_hex(self.keystore_dict['crypto']['ciphertext'])
+        ciphertext = self.keystore_dict['crypto']['ciphertext']
         mac = calculate_mac(key, ciphertext)
-        if mac != decode_hex(self.keystore_dict['crypto']['mac']):
+        if decode_hex(mac) != decode_hex(self.keystore_dict['crypto']['mac']):
             raise DecryptionError('MAC mismatch')
 
     def _decrypt_private_key(self, key):
         cipher = self.keystore_dict['crypto']['cipher']
-        ciphertext = decode_hex(self.keystore_dict['crypto']['ciphertext'])
+        ciphertext = self.keystore_dict['crypto']['ciphertext']
         assert cipher in ciphers  # checked during validation
         params = self.keystore_dict['crypto']['cipherparams']
         decrypt = decryptors[cipher]
-        private_key = decrypt(ciphertext, key[:16], params)
-        return encode_hex(private_key)
+        private_key = decrypt(ciphertext, key[:32 + 2], params)
+        return normalize_private_key(private_key)
 
 
 def parse_keystore(keystore):
@@ -291,4 +293,4 @@ def parse_keystore(keystore):
 
 
 def calculate_mac(key, ciphertext):
-    return keccak(key[16:32] + ciphertext)
+    return encode_hex(keccak(decode_hex(key)[16:32] + decode_hex(ciphertext)))

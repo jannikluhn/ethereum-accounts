@@ -14,17 +14,17 @@ from .exceptions import InvalidKeystore
 def encrypt_aes_128_ctr(private_key, key, params):
     iv = int.from_bytes(decode_hex(params['iv']), byteorder='big')
     counter = Counter.new(128, initial_value=iv, allow_wraparound=True)
-    cipher = AES.new(key, mode=AES.MODE_CTR, counter=counter)
-    ciphertext = cipher.encrypt(private_key)
-    return ciphertext
+    cipher = AES.new(decode_hex(key), mode=AES.MODE_CTR, counter=counter)
+    ciphertext = cipher.encrypt(decode_hex(private_key))
+    return encode_hex(ciphertext)
 
 
 def decrypt_aes_128_ctr(ciphertext, key, params):
     iv = int.from_bytes(decode_hex(params['iv']), byteorder='big')
     counter = Counter.new(128, initial_value=iv, allow_wraparound=True)
-    cipher = AES.new(key, mode=AES.MODE_CTR, counter=counter)
-    private_key = cipher.decrypt(ciphertext)
-    return private_key
+    cipher = AES.new(decode_hex(key), mode=AES.MODE_CTR, counter=counter)
+    private_key = cipher.decrypt(decode_hex(ciphertext))
+    return encode_hex(private_key)
 
 
 def validate_aes_128_ctr_params(params):
@@ -35,7 +35,7 @@ def validate_aes_128_ctr_params(params):
 
 def generate_aes_128_ctr_params():
     return {
-        remove_0x_prefix(encode_hex(os.urandom(16)))
+        'iv': remove_0x_prefix(encode_hex(os.urandom(16))),
     }
 
 
