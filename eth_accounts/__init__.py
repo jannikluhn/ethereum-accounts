@@ -1,12 +1,12 @@
+from .accounts import (
+    Account,
+)
+
 from .exceptions import (
     EthereumAccountException,
     DecryptionError,
     InvalidKeystore,
     UnsupportedKeystore,
-)
-
-from .keystore import (
-    Account,
 )
 
 from .utils import (
