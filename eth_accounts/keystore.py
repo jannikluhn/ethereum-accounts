@@ -48,6 +48,17 @@ class Account(object):
         self._locked = True
 
     @classmethod
+    def new(cls):
+        """Create an account based on a newly generated random private key.
+
+        The returned account will be unlocked.
+
+        :returns: the created and unlocked account
+        """
+        private_key = random_private_key()
+        return Account.from_private_key(private_key)
+
+    @classmethod
     def from_private_key(cls, private_key):
         """Create an account based on a private key.
 
@@ -60,6 +71,7 @@ class Account(object):
         account = cls()
         account._private_key = normalize_private_key(private_key)
         account.unlock()  # trigger derivation of public key and address
+        return account
 
     @classmethod
     def from_keystore(cls, keystore, password=None):
@@ -195,12 +207,21 @@ class Account(object):
             keystore_dict['address'] = self.address
 
         if uuid is True:
-            keystore_dict['id'] = uuid4()
-            assert False  # TODO: find out correct format, should include timestamp
+            keystore_dict['id'] = str(uuid4())
+            # TODO: find out correct format, should include timestamp
         elif uuid is not None:
-            keystore_dict['id'] = uuid
+            keystore_dict['id'] = str(uuid)
 
         return keystore_dict
+
+    def __eq__(self, other):
+        if not isinstance(other, Account):
+            return False
+        if self.is_locked() or other.is_locked():
+            raise ValueError('cannot compare locked accounts')
+        assert is_hex(self.private_key) and is_hex(other.private_key)
+        # hex decode to avoid capitalization issues, just to be sure
+        return decode_hex(self.private_key) == decode_hex(other.private_key)
 
 
 class KeystoreAccount(Account):
