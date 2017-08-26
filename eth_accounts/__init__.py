@@ -17,8 +17,8 @@ from .utils import (
 )
 
 from .signing import (
+    prepare_ethereum_message,
+    recover_signer,
     sign,
-    sign_transaction,
-    sign_ethereum_message,
     verify_signature,
 )
