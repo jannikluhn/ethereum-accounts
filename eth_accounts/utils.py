@@ -12,9 +12,12 @@ from eth_utils import (
     is_integer,
     is_text,
     keccak,
+    pad_left,
     remove_0x_prefix,
     to_checksum_address,
 )
+
+PRIVATE_KEY_SIZE = 32
 
 
 def random_private_key():
@@ -70,20 +73,21 @@ def normalize_private_key(private_key):
     if is_integer(private_key):
         if private_key <= 0:
             raise ValueError('Private key out of allowed range')
-        private_key_hex = encode_hex(int_to_big_endian(private_key))
+        private_key = encode_hex(int_to_big_endian(private_key))
     elif is_bytes(private_key):
-        private_key_hex = encode_hex(private_key)
+        private_key = encode_hex(private_key)
     elif is_text(private_key):
         if not is_hex(private_key):
             raise ValueError('Private key must be hex encoded if of type string')
-        private_key_hex = add_0x_prefix(private_key).lower()
+        private_key = add_0x_prefix(private_key).lower()
     else:
         raise TypeError('Private key must be either bytes, integer, or hex encoded string')
+    private_key = pad_left(remove_0x_prefix(private_key), 2 * PRIVATE_KEY_SIZE, '0')
     try:
-        PrivateKey.from_hex(remove_0x_prefix(private_key_hex))
+        PrivateKey.from_hex(remove_0x_prefix(private_key))
     except ValueError:
         raise ValueError('Private key out of allowed range')
-    return private_key_hex
+    return add_0x_prefix(private_key)
 
 
 def normalize_public_key(public_key):

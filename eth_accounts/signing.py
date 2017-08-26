@@ -70,5 +70,4 @@ def verify_signature(signature, message, address, hash=True, encoding='iso-8859-
 def prepare_ethereum_message(message, encoding='iso-8859-1'):
     message = force_bytes(message, encoding)
     to_hash = b'\x19Ethereum Signed Message:\n' + int_to_big_endian(len(message)) + message
-    to_sign = keccak(to_hash)
-    return to_sign
+    return to_hash
