@@ -3,7 +3,10 @@ from coincurve import (
     PublicKey,
 )
 
+import rlp
+
 from eth_utils import (
+    big_endian_to_int,
     decode_hex,
     encode_hex,
     force_bytes,
@@ -71,3 +74,23 @@ def prepare_ethereum_message(message, encoding='iso-8859-1'):
     message = force_bytes(message, encoding)
     to_hash = b'\x19Ethereum Signed Message:\n' + int_to_big_endian(len(message)) + message
     return to_hash
+
+
+def sign_transaction(transaction, private_key, network_id):
+    transaction.v = network_id
+    transaction.r = 0
+    transaction.s = 0
+    transaction_rlp = rlp.encode(transaction)
+    v, r, s = get_vrs(sign(transaction_rlp, private_key))
+    import pudb.b
+    transaction.v = v + network_id * 2 + 35
+    transaction.r = r
+    transaction.s = s
+
+
+def get_vrs(signature):
+    signature = decode_hex(normalize_signature(signature))
+    r = signature[:32]
+    s = signature[32:64]
+    v = signature[64:]
+    return tuple(big_endian_to_int(x) for x in [v, r, s])

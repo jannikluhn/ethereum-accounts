@@ -16,6 +16,7 @@ setup(
         'coincurve',
         'ethereum-utils>=0.1.0',
         'pycrypto',
-        'scrypt'
+        'scrypt',
+        'web3>=3.13.1',
     ]
 )

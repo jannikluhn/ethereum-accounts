@@ -7,6 +7,7 @@ from eth_utils import (
 
 from eth_accounts import (
     Account,
+    get_vrs,
     prepare_ethereum_message,
     recover_signer,
     sign,
@@ -53,3 +54,10 @@ def test_ethereum_message_preparation(account):
     ethereum_message = prepare_ethereum_message(message)
     signature = sign(ethereum_message, account.private_key)
     assert signature == target
+
+
+def test_vrs(account):
+    message = b'test'
+    signature = sign(message, account.private_key)
+    v, r, s = get_vrs(signature)
+    assert False  # TODO: target?

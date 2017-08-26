@@ -17,8 +17,14 @@ from .utils import (
 )
 
 from .signing import (
+    get_vrs,
     prepare_ethereum_message,
     recover_signer,
     sign,
+    sign_transaction,
     verify_signature,
+)
+
+from .middleware import (
+    construct_local_signing_middleware,
 )
