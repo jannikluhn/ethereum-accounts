@@ -236,14 +236,6 @@ class Account(object):
 
         return keystore_dict
 
-    def __eq__(self, other):
-        if not isinstance(other, Account):
-            return False
-        if self.is_locked() or other.is_locked():
-            raise ValueError('cannot compare locked accounts')
-        assert is_hex(self.private_key) and is_hex(other.private_key)
-        # hex decode to avoid capitalization issues, just to be sure
-        return decode_hex(self.private_key) == decode_hex(other.private_key)
 
     def __repr__(self):
         object_id = hex(id(self))
