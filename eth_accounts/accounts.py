@@ -245,6 +245,14 @@ class Account(object):
         # hex decode to avoid capitalization issues, just to be sure
         return decode_hex(self.private_key) == decode_hex(other.private_key)
 
+    def __repr__(self):
+        object_id = hex(id(self))
+        try:
+            address = self.address[:4 + 2] + '...'
+        except AccountLocked:
+            address = 'unknown'
+        return '<Account at {} (address: {})>'.format(object_id, address)
+
 
 class KeystoreAccount(Account):
 
