@@ -158,6 +158,26 @@ class Account(object):
         """Lock the account prohibiting access to the private key."""
         self._locked = True
 
+    def request_unlock(self):
+        """Call this method to request unlocking of the account (e.g. to trigger user input).
+
+        Each unlock request should be followed by a lock request once the account's private key is
+        not needed any longer.
+
+        :returns: a unique request id
+        """
+        # TODO
+        # should call unlock callbacks (that by default just unlock)
+        # what happens if account is already unlocked?
+        # what happens if unlocking fails?
+
+    def request_lock(self, request_id):
+        """Call this method to request locking of the account (after an earlier unlock request).
+
+        :param request_id: """
+        # TODO
+        # should call lock callbacks (that by default just lock)
+
     def is_locked(self):
         """Check if the account is locked.
 
