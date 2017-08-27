@@ -23,7 +23,7 @@ from .utils import (
 )
 
 
-def sign(message, private_key, hash=True, encoding='iso-8859-1'):
+def sign_message(message, private_key, hash=True, encoding='iso-8859-1'):
     """Sign a message using a private key.
 
     :param private_key: the hex encoded private key that should be used to sign the message

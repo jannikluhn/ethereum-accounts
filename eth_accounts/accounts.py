@@ -3,13 +3,18 @@ from io import IOBase
 import json
 from uuid import uuid4
 
+from cytoolz.dicttoolz import (
+    assoc,
+)
 from eth_utils import (
     decode_hex,
     encode_hex,
     is_hex,
+    is_same_address,
     keccak,
     to_checksum_address,
 )
+import rlp
 
 from .ciphers import (
     cipher_param_generators,
@@ -33,6 +38,12 @@ from .utils import (
     private_key_to_address,
     private_key_to_public_key,
     random_private_key,
+    Transaction,
+)
+from .signing import (
+    sign_message,
+    sign_transaction,
+    verify_signature,
 )
 from .validation import (
     validate_keystore,
@@ -134,7 +145,6 @@ class Account(object):
 
         :raises `AccountLocked`: if the account has never been unlocked
         """
-        # TODO: check keystore for address
         if self._address is None:
             try:
                 private_key = self.private_key
@@ -236,6 +246,67 @@ class Account(object):
 
         return keystore_dict
 
+    def sign_message(self, message, hash=True, encoding='iso-8859-1'):
+        return sign_message(message, self.private_key, hash, encoding)
+
+    def sign_transaction(self, transaction, network_id):
+        return sign_transaction(transaction, self.private_key, network_id)
+
+    def is_signer(self, signature, message, hash=True, encoding='iso-8859-1'):
+        return verify_signature(signature, message, self.address, hash=hash, encoding=encoding)
+
+    def local_signing_middleware(self, make_request, web3):
+        """Creates a Web3 middleware that signs transactions originating from this account."""
+        def middleware(method, params):
+
+            def ignore():
+                response = make_request(method, params)
+                return response
+
+            if self.is_locked():
+                return ignore()
+
+            if method != 'eth_sendTransaction':
+                return ignore()
+
+            transaction = params[0]
+            if 'from' not in transaction:
+                return ignore()
+            sender = transaction['from']
+            if not is_same_address(sender, self.address):
+                return ignore()
+
+            assert 'gas' in transaction  # TODO: handled by another middleware?
+            assert 'gasPrice' in transaction  # TODO: default to something?
+
+            if 'to' not in transaction:
+                assoc(transaction, 'to', '0x')
+            if 'value' not in transaction:
+                assoc(transaction, 'value', 0)
+            if 'data' not in transaction:
+                assoc(transaction, 'data', '0x')
+            if 'nonce' not in transaction:
+                assoc(transaction, 'data', web3.eth.getTransactionCount(sender))
+
+            # construct raw transaction
+            network_id = 1  # TODO: wait for next version of web3.py to implement this
+            # network_id = web3.net.version
+            transaction_object = Transaction(
+                transaction.get('nonce'),
+                transaction.get('gasPrice'),
+                transaction.get('gas'),
+                decode_hex(transaction.get('to', '0x')),
+                transaction.get('value', 0),
+                decode_hex(transaction.get('data', '0x')),
+                0,
+                0,
+                0
+            )
+            self.sign_transaction(transaction_object, network_id)
+            raw_transaction_hex = encode_hex(rlp.encode(transaction_object))
+            return make_request('eth_sendRawTransaction', [raw_transaction_hex])
+
+        return middleware
 
     def __repr__(self):
         object_id = hex(id(self))
