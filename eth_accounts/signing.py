@@ -81,8 +81,7 @@ def sign_transaction(transaction, private_key, network_id):
     transaction.r = 0
     transaction.s = 0
     transaction_rlp = rlp.encode(transaction)
-    v, r, s = get_vrs(sign(transaction_rlp, private_key))
-    import pudb.b
+    v, r, s = get_vrs(sign_message(transaction_rlp, private_key))
     transaction.v = v + network_id * 2 + 35
     transaction.r = r
     transaction.s = s

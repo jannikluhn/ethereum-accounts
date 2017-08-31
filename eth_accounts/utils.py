@@ -118,7 +118,7 @@ class Transaction(rlp.Serializable):
         ('nonce', big_endian_int),
         ('gasprice', big_endian_int),
         ('startgas', big_endian_int),
-        ('to', Binary.fixed_length(20)),
+        ('to', Binary.fixed_length(20, allow_empty=True)),
         ('value', big_endian_int),
         ('data', binary),
         ('v', big_endian_int),

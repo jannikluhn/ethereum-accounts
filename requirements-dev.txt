@@ -1,2 +1,4 @@
 pytest
 ipython
+web3
+eth-testrpc

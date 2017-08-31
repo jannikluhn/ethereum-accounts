@@ -50,10 +50,17 @@ Public keys
 Addresses
 ---------
 
+Addresses will always be returned hex encoded, `'0x'`-prefixed and EIP55-checksummed format.
+
 
 Messaages
 ---------
 
+Messages must be provided either as bytes or hex encoded text. They are output as bytes.
+
 
 Signatures
 ----------
+
+Signatures are `'0x'`-prefixed, hex encoded and all lowercase, but can also be provided without
+prefix or any-case, as well as as bytes.
