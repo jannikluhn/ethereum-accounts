@@ -13,14 +13,14 @@ from eth_accounts.kdfs import kdf_param_generators
 from eth_accounts.ciphers import cipher_param_generators
 
 
-def test_valid():
+def test_validity():
     account = Account.new()
     scrypt_keystore_dict = account.to_keystore_dict(b'password', kdf='scrypt')
     pbkdf2_keystore_dict = account.to_keystore_dict(b'password', kdf='pbkdf2')
     recovered_scrypt_account = Account.from_keystore(scrypt_keystore_dict, b'password')
     recovered_pbkdf2_account = Account.from_keystore(pbkdf2_keystore_dict, b'password')
-    assert recovered_scrypt_account == account
-    assert recovered_pbkdf2_account == account
+    assert recovered_scrypt_account.private_key == account.private_key
+    assert recovered_pbkdf2_account.private_key == account.private_key
 
 
 def test_exposed_address():
@@ -95,4 +95,4 @@ def test_write_to_file():
     account.to_keystore(f, b'password')
     f.seek(0)
     recovered_account = Account.from_keystore(f, b'password')
-    assert recovered_account == account
+    assert recovered_account.private_key == account.private_key

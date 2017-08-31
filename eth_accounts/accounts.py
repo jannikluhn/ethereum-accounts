@@ -3,13 +3,9 @@ from io import IOBase
 import json
 from uuid import uuid4
 
-from cytoolz.dicttoolz import (
-    assoc,
-)
 from eth_utils import (
     decode_hex,
     encode_hex,
-    is_hex,
     is_same_address,
     keccak,
     to_checksum_address,
@@ -24,7 +20,6 @@ from .ciphers import (
     encryptors,
 )
 from .exceptions import (
-    AccountLocked,
     DecryptionError,
     UnsupportedKeystore,
 )
@@ -58,16 +53,10 @@ class Account(object):
         self._private_key = None
         self._public_key = None
         self._address = None
-        self._locked = True
 
     @classmethod
     def new(cls):
-        """Create an account based on a newly generated random private key.
-
-        The returned account will be unlocked.
-
-        :returns: the created and unlocked account
-        """
+        """Create an account based on a newly generated random private key."""
         private_key = random_private_key()
         return Account.from_private_key(private_key)
 
@@ -75,26 +64,19 @@ class Account(object):
     def from_private_key(cls, private_key):
         """Create an account based on a private key.
 
-        The returned account will be unlocked.
-
-        :param private_key: the private key, either as byte string or hex encoded (with or without
-                            `'0z'`-prefix)
-        :returns: the created and unlocked account
+        :param private_key: the private key
         """
         account = cls()
         account._private_key = normalize_private_key(private_key)
-        account.unlock()  # trigger derivation of public key and address
         return account
 
     @classmethod
-    def from_keystore(cls, keystore, password=None):
+    def from_keystore(cls, keystore, password):
         """Load an account from a keystore.
-
-        If a password is provided, the keystore will be unlocked, otherwise it will stay locked.
 
         :param keystore: the keystore, either as a readable file, a dictionary, or a JSON encoded
                          string
-        :param password: the keystore's password or `None`
+        :param password: the keystore's password
         """
         return KeystoreAccount(keystore, password)
 
@@ -104,96 +86,26 @@ class Account(object):
 
     @property
     def private_key(self):
-        """The account's private key in hex encoded, `'0x'`-prefixed form..
-
-        The private key is only accessible for unlocked accounts.
-
-        :raises `AccountLocked`: if the account is locked
-        """
-        if not self._locked:
-            return self._private_key
-        else:
-            raise AccountLocked('Cannot access private key of locked account')
+        """The account's private key in hex encoded, `'0x'`-prefixed form."""
+        return self._private_key
 
     @property
     def public_key(self):
-        """The account's public key in hex encoded, `'0x'`-prefixed form.
-
-        The public key is only accessible after the accound is unlocked for the first time, but
-        remains so when being locked again.
-
-        :raises `AccountLocked`: if the account has never been unlocked
-        """
+        """The account's public key in hex encoded, `'0x'`-prefixed form."""
         if self._public_key is None:
-            try:
-                private_key = self.private_key
-            except AccountLocked:
-                raise AccountLocked('Cannot derive public key of locked account')
-            else:
-                self._public_key = private_key_to_public_key(private_key)
+            self._public_key = private_key_to_public_key(self.private_key)
         return self._public_key
 
     @property
     def address(self):
         """The account's address in hex encoded, `'0x'`-prefixed form.
 
-        The address is only accessible after the accound is unlocked for the first time, but
-        remains so when being locked again.
-
         Note that this is independent from the address contained as plain text in the keystore
         file. To access this use `Account.exposed_address`.
-
-        :raises `AccountLocked`: if the account has never been unlocked
         """
         if self._address is None:
-            try:
-                private_key = self.private_key
-            except AccountLocked:
-                raise AccountLocked('Cannot derive address of locked account')
-            else:
-                self._address = private_key_to_address(private_key)
+            self._address = private_key_to_address(self.private_key)
         return self._address
-
-    def unlock(self):
-        """Unlock the account.
-
-        :param password: (only for keystore accounts) the password decrypting the keystore
-        """
-        self._locked = False
-        # force derivation of public key and address
-        self.public_key
-        self.address
-
-    def lock(self):
-        """Lock the account prohibiting access to the private key."""
-        self._locked = True
-
-    def request_unlock(self):
-        """Call this method to request unlocking of the account (e.g. to trigger user input).
-
-        Each unlock request should be followed by a lock request once the account's private key is
-        not needed any longer.
-
-        :returns: a unique request id
-        """
-        # TODO
-        # should call unlock callbacks (that by default just unlock)
-        # what happens if account is already unlocked?
-        # what happens if unlocking fails?
-
-    def request_lock(self, request_id):
-        """Call this method to request locking of the account (after an earlier unlock request).
-
-        :param request_id: """
-        # TODO
-        # should call lock callbacks (that by default just lock)
-
-    def is_locked(self):
-        """Check if the account is locked.
-
-        :returns: `True` or `False`
-        """
-        return self._locked
 
     def to_keystore(self, f, password, expose_address=True, uuid=True, kdf='scrypt',
                     kdf_params=None, cipher='aes-128-ctr', cipher_params=None, pretty=True):
@@ -262,9 +174,6 @@ class Account(object):
                 response = make_request(method, params)
                 return response
 
-            if self.is_locked():
-                return ignore()
-
             if method != 'eth_sendTransaction':
                 return ignore()
 
@@ -301,28 +210,16 @@ class Account(object):
 
     def __repr__(self):
         object_id = hex(id(self))
-        try:
-            address = self.address[:4 + 2] + '...'
-        except AccountLocked:
-            address = 'unknown'
+        address = self.address[:4 + 2] + '...'
         return '<Account at {} (address: {})>'.format(object_id, address)
 
 
 class KeystoreAccount(Account):
 
-    def __init__(self, keystore, password=None):
+    def __init__(self, keystore, password):
         super().__init__()
         self.keystore_dict = parse_keystore(keystore)
-        if password is not None:
-            self.unlock(password)
-
-    def unlock(self, password):
         self._extract_private_key(password)
-        self._locked = False
-
-    def lock(self):
-        self._private_key = None
-        self._locked = True
 
     @property
     def exposed_address(self):

@@ -17,6 +17,8 @@ from eth_accounts import (
     UnsupportedKeystore,
 )
 
+from eth_accounts.validation import validate_keystore
+
 
 testdata_directory = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'testdata')
 official_test_vector_path = os.path.join(testdata_directory, 'official_keystore_tests.json')
@@ -31,8 +33,7 @@ def test_official_vectors():
         password = force_bytes(test['password'])
         private_key = add_0x_prefix(test['priv'])
 
-        account = Account.from_keystore(keystore)
-        account.unlock(password)
+        account = Account.from_keystore(keystore, password)
         assert account.private_key == private_key
 
         assert account.exposed_address is None
@@ -52,78 +53,61 @@ def scrypt_keystore_template():
     return d
 
 
-def test_account_locked_without_password(pbkdf2_keystore_template):
-    account = Account.from_keystore(pbkdf2_keystore_template)
-    assert account.is_locked()
-
-
-def test_account_unlocked_with_password(pbkdf2_keystore_template):
-    account = Account.from_keystore(pbkdf2_keystore_template, b'password')
-    assert not account.is_locked()
-
-
-def test_account_unlockable_with_password(pbkdf2_keystore_template):
-    account = Account.from_keystore(pbkdf2_keystore_template)
-    account.unlock(b'password')
-    assert not account.is_locked()
-
-
 def test_account_unlocking_fails_with_wrong_password(pbkdf2_keystore_template):
-    account = Account.from_keystore(pbkdf2_keystore_template)
     wrong_passwords = [b'', b'asdf', b'PASSWORD']
     for password in wrong_passwords:
         with pytest.raises(DecryptionError):
-            account.unlock(password)
+            Account.from_keystore(pbkdf2_keystore_template, password)
 
 
 def test_account_password_type_checks(pbkdf2_keystore_template):
-    account = Account.from_keystore(pbkdf2_keystore_template)
     invalid_passwords = ['password', 123, None, pbkdf2_keystore_template]
     for password in invalid_passwords:
         with pytest.raises(TypeError):
-            account.unlock(password)
+            Account.from_keystore(pbkdf2_keystore_template, password)
 
 
 def test_exposed_address(pbkdf2_keystore_template):
-    account = Account.from_keystore(pbkdf2_keystore_template)
+    account = Account.from_keystore(pbkdf2_keystore_template, b'password')
     exposed_address = account.exposed_address
     assert is_checksum_address(exposed_address)
     assert is_same_address(exposed_address, pbkdf2_keystore_template['address'])
+    assert is_same_address(exposed_address, account.address)
 
 
 def test_missing_address(pbkdf2_keystore_template):
     pbkdf2_keystore_template.pop('address')
-    account = Account.from_keystore(pbkdf2_keystore_template)
+    account = Account.from_keystore(pbkdf2_keystore_template, b'password')
     assert account.exposed_address is None
 
 
 def test_missing_crypto(pbkdf2_keystore_template):
     pbkdf2_keystore_template.pop('crypto')
     with pytest.raises(InvalidKeystore):
-        Account.from_keystore(pbkdf2_keystore_template)
+        validate_keystore(pbkdf2_keystore_template)
 
 
 def test_missing_version(pbkdf2_keystore_template):
     pbkdf2_keystore_template.pop('version')
     with pytest.raises(InvalidKeystore):
-        Account.from_keystore(pbkdf2_keystore_template)
+        validate_keystore(pbkdf2_keystore_template)
 
 
 def test_version(pbkdf2_keystore_template):
     valid_versions = [3, '3', ' 3', '3 ', '3\n']
     for version in valid_versions:
         pbkdf2_keystore_template['version'] = version
-        Account.from_keystore(pbkdf2_keystore_template)
+        validate_keystore(pbkdf2_keystore_template)
     invalid_versions = ['', 'three', '3.0', '3.', '-1', '0', -1, 0]
     for version in invalid_versions:
         pbkdf2_keystore_template['version'] = version
         with pytest.raises(InvalidKeystore):
-            Account.from_keystore(pbkdf2_keystore_template)
+            validate_keystore(pbkdf2_keystore_template)
     unsupported_versions = ['1', '2', '4', 2, 1, 4]
     for version in unsupported_versions:
         pbkdf2_keystore_template['version'] = version
         with pytest.raises(UnsupportedKeystore):
-            Account.from_keystore(pbkdf2_keystore_template)
+            validate_keystore(pbkdf2_keystore_template)
 
 
 def test_unknown_cipher(pbkdf2_keystore_template):
@@ -131,25 +115,25 @@ def test_unknown_cipher(pbkdf2_keystore_template):
     for cipher in unkown_ciphers:
         pbkdf2_keystore_template['crypto']['cipher'] = cipher
         with pytest.raises(UnsupportedKeystore):
-            Account.from_keystore(pbkdf2_keystore_template)
+            validate_keystore(pbkdf2_keystore_template)
 
 
 def test_missing_iv_param(pbkdf2_keystore_template):
     pbkdf2_keystore_template['crypto']['cipherparams'].pop('iv')
     with pytest.raises(InvalidKeystore):
-        Account.from_keystore(pbkdf2_keystore_template)
+        validate_keystore(pbkdf2_keystore_template)
 
 
 def test_missing_ciphertext(pbkdf2_keystore_template):
     pbkdf2_keystore_template['crypto'].pop('ciphertext')
     with pytest.raises(InvalidKeystore):
-        Account.from_keystore(pbkdf2_keystore_template)
+        validate_keystore(pbkdf2_keystore_template)
 
 
 def test_missing_kdf(pbkdf2_keystore_template):
     pbkdf2_keystore_template['crypto'].pop('kdf')
     with pytest.raises(InvalidKeystore):
-        Account.from_keystore(pbkdf2_keystore_template)
+        validate_keystore(pbkdf2_keystore_template)
 
 
 def test_unknown_kdf(pbkdf2_keystore_template):
@@ -157,19 +141,19 @@ def test_unknown_kdf(pbkdf2_keystore_template):
     for kdf in unkown_kdfs:
         pbkdf2_keystore_template['crypto']['kdf'] = kdf
         with pytest.raises(UnsupportedKeystore):
-            Account.from_keystore(pbkdf2_keystore_template)
+            validate_keystore(pbkdf2_keystore_template)
 
 
 def test_missing_mac(pbkdf2_keystore_template):
     pbkdf2_keystore_template['crypto'].pop('mac')
     with pytest.raises(InvalidKeystore):
-        Account.from_keystore(pbkdf2_keystore_template)
+        validate_keystore(pbkdf2_keystore_template)
 
 
 def test_missing_kdf_params(pbkdf2_keystore_template):
     pbkdf2_keystore_template['crypto'].pop('kdfparams')
     with pytest.raises(InvalidKeystore):
-        Account.from_keystore(pbkdf2_keystore_template)
+        validate_keystore(pbkdf2_keystore_template)
 
 
 def test_missing_pbkdf2_params(pbkdf2_keystore_template):
@@ -178,7 +162,7 @@ def test_missing_pbkdf2_params(pbkdf2_keystore_template):
         d = copy.deepcopy(pbkdf2_keystore_template)
         d['crypto']['kdfparams'].pop(param)
         with pytest.raises(InvalidKeystore):
-            Account.from_keystore(d)
+            validate_keystore(d)
 
 
 def test_missing_scrypt_params(scrypt_keystore_template):
@@ -187,4 +171,4 @@ def test_missing_scrypt_params(scrypt_keystore_template):
         d = copy.deepcopy(scrypt_keystore_template)
         d['crypto']['kdfparams'].pop(param)
         with pytest.raises(InvalidKeystore):
-            Account.from_keystore(d)
+            validate_keystore(d)

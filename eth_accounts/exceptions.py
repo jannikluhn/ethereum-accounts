@@ -12,7 +12,3 @@ class InvalidKeystore(EthereumAccountException, ValueError):
 
 class UnsupportedKeystore(EthereumAccountException, ValueError):
     pass
-
-
-class AccountLocked(EthereumAccountException, ValueError):
-    pass
