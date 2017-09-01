@@ -24,7 +24,7 @@ Account creation
     In [4]: other_account = Account.from_private_key('0xabababababababababababababababababababababababababab
        ...: abababababab')
 
-    In [5]: third_account = Account.from_keystore('keystore.json')
+    In [5]: third_account = Account.from_keystore('keystore.json', b'password')
 
 
 Message signing

@@ -19,11 +19,15 @@ your needs. Have fun!
 
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
    :caption: Contents:
 
    quickstart
    encodings
+   account_creation
+   signing
+   web3
+   account_export
 
 
 
