@@ -10,7 +10,6 @@ from eth_utils import (
     decode_hex,
     encode_hex,
     keccak,
-    int_to_big_endian,
     remove_0x_prefix,
 )
 

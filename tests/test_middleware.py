@@ -106,7 +106,7 @@ def transaction_dict():
     dissoc(transaction_dict(), 'to'),
     dissoc(transaction_dict(), 'value'),
     dissoc(transaction_dict(), 'gasPrice'),
-    dissoc(transaction_dict(), 'gas'),
+    pytest.param(dissoc(transaction_dict(), 'gas'), marks=pytest.mark.xfail(reason="web3 todo")),
     dissoc(transaction_dict(), 'data'),
 ])
 def test_defaults(web3, account, other_account, transaction_dict):
