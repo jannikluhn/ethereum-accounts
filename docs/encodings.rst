@@ -3,12 +3,13 @@ Encoding conventions
 
 First things first, we follow web3.py's `conventions
 <https://web3py.readthedocs.io/en/latest/conventions.html>`_: We call strings either bytes
-or text, depending on if they are binary (``b'test'``) or unicode (``u'test'`` or simply ``'test'``).
+or text, depending on if they are binary (``b'test'``) or unicode (``u'test'`` or simply
+``'test'``).
 
 In general, `ethereum-accounts` returns data in consistent formats. On the other hand, it tries
 to be as forgiving as possible when it comes to accepting data, but only if it can do so
-unambigiously. If this is not possible, it raises an exception (typically a ``ValueError`` or
-``TypeError``).
+unambigiously. If this is not possible, it raises an exception (typically a :exc:`ValueError` or
+:exc:`TypeError`).
 
 The return format of private keys, public keys, addresses and signatures is hex encoded with a
 ``'0x'``-prefix. In addition, private keys are left-padded with zeros to a length of 32 bytes (or

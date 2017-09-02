@@ -23,20 +23,15 @@ PRIVATE_KEY_SIZE = 32
 def random_private_key():
     """Generate a random private key.
 
-    `os.urandom` (via the coincurve package) is used to generate randomness.
+    .. note::
 
-    :returns: a random hex encoded `'0x'` prefixed private key.
+        `os.urandom` (via the coincurve package) is used to generate randomness.
     """
     return add_0x_prefix(PrivateKey().to_hex())
 
 
 def private_key_to_public_key(private_key):
-    """Calculate the public key corresponding to a given private key.
-
-    :param private_key: the private key, either hex encoded (with or without `'0x'`-prefix) or as
-                        bytes
-    :returns: the hex encoded, `'0x'`-prefixed public key
-    """
+    """Calculate the public key corresponding to a given private key."""
     private_key = normalize_private_key(private_key)
     private_key_object = PrivateKey.from_hex(remove_0x_prefix(private_key))
     public_key_object = private_key_object.public_key
@@ -44,12 +39,7 @@ def private_key_to_public_key(private_key):
 
 
 def private_key_to_address(private_key):
-    """Calculate the address corresponding to a given private key.
-
-    :param private_key: the private key, either hex encoded (with or without `'0x'`-prefix) or as
-                        bytes
-    :returns: the hex encoded, `'0x'`-prefixed, checksummed address
-    """
+    """Calculate the address corresponding to a given private key."""
     private_key = normalize_private_key(private_key)
     public_key = private_key_to_public_key(private_key)
     address = public_key_to_address(public_key)
@@ -57,12 +47,7 @@ def private_key_to_address(private_key):
 
 
 def public_key_to_address(public_key):
-    """Calculate the address corresponding to a given public key.
-
-    :param public_key: the public key, either as bytes or hex encoded string (with or without
-                       `'0x'`-prefix)
-    :returns: the hex encoded, `'0x'`-prefixed, checksummed address
-    """
+    """Calculate the address corresponding to a given public key."""
     public_key = normalize_public_key(public_key)
     public_key_hash = keccak(decode_hex(public_key)[1:])
     address = to_checksum_address(public_key_hash[12:])
@@ -99,6 +84,17 @@ def normalize_public_key(public_key):
         return add_0x_prefix(public_key).lower()
     else:
         raise TypeError('Public key must be either bytes or hex encoded string')
+
+
+def normalize_message(message):
+    if is_bytes(message):
+        return message
+    elif is_text(message):
+        if not is_hex(message):
+            raise ValueError('Message must be hex encoded if of type string')
+        return decode_hex(message)
+    else:
+        raise TypeError('Message must be either bytes or hex encoded string')
 
 
 def normalize_signature(signature):

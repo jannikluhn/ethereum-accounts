@@ -38,7 +38,8 @@ from .utils import (
 from .signing import (
     sign_message,
     sign_transaction,
-    verify_signature,
+    recover_sender,
+    recover_signer,
 )
 from .validation import (
     validate_keystore,
@@ -56,16 +57,18 @@ class Account(object):
 
     @classmethod
     def new(cls):
-        """Create an account based on a newly generated random private key."""
+        """Create an account based on a newly generated random private key.
+
+        .. note::
+
+            `os.urandom` (via the coincurve package) is used to generate randomness.
+        """
         private_key = random_private_key()
         return Account.from_private_key(private_key)
 
     @classmethod
     def from_private_key(cls, private_key):
-        """Create an account based on a private key.
-
-        :param private_key: the private key
-        """
+        """Create an account based on a private key."""
         account = cls()
         account._private_key = normalize_private_key(private_key)
         return account
@@ -77,98 +80,82 @@ class Account(object):
         :param keystore: the keystore, either as a readable file, a dictionary, or a JSON encoded
                          string
         :param password: the keystore's password
+        :raises: :exc:`InvalidKeystore` if the keystore to import is invalid
+        :raises: :exc:`UnsupportedKeystore` if the keystore has the wrong version, or an unknown
+                 KDF or cipher is used
+        :raises: :exc:`DecryptionError` if the password is wrong
         """
         return KeystoreAccount(keystore, password)
 
-    @classmethod
-    def from_mnemoic(cls, phrase):
-        pass
-
     @property
     def private_key(self):
-        """The account's private key in hex encoded, `'0x'`-prefixed form."""
+        """The account's private key."""
         return self._private_key
 
     @property
     def public_key(self):
-        """The account's public key in hex encoded, `'0x'`-prefixed form."""
+        """The account's public key."""
         if self._public_key is None:
             self._public_key = private_key_to_public_key(self.private_key)
         return self._public_key
 
     @property
     def address(self):
-        """The account's address in hex encoded, `'0x'`-prefixed form.
-
-        Note that this is independent from the address contained as plain text in the keystore
-        file. To access this use `Account.exposed_address`.
-        """
+        """The account's address, as inferred from the private key."""
         if self._address is None:
             self._address = private_key_to_address(self.private_key)
         return self._address
 
-    def to_keystore(self, f, password, expose_address=True, uuid=True, kdf='scrypt',
-                    kdf_params=None, cipher='aes-128-ctr', cipher_params=None, pretty=True):
-        d = self.to_keystore_dict(password, expose_address, uuid, kdf, kdf_params,
-                                  cipher, cipher_params)
-        indent = 4 if pretty else None
-        json.dump(d, f, indent=indent)
+    def sign_message(self, message, hash=True):
+        """Sign a message.
 
-    def to_keystore_dict(self, password, expose_address=True, uuid=True, kdf='scrypt',
-                         kdf_params=None, cipher='aes-128-ctr', cipher_params=None):
-        private_key = self.private_key
-
-        if kdf not in kdfs:
-            raise UnsupportedKeystore('{} kdf not supported'.format(kdf))
-        kdf_params = {**kdf_param_generators[kdf](), **(kdf_params or {})}
-
-        if cipher not in ciphers:
-            raise UnsupportedKeystore('{} cipher not supported'.format(kdf))
-        cipher_params = {**cipher_param_generators[cipher](), **(cipher_params or {})}
-
-        validate_kdf_params = kdf_param_validators[kdf]
-        validate_kdf_params(kdf_params)
-        validate_cipher_params = cipher_param_validators[cipher]
-        validate_cipher_params(cipher_params)
-
-        key = kdfs[kdf](password, kdf_params)
-        ciphertext = encryptors[cipher](private_key, key[:32 + 2], cipher_params)
-        mac = calculate_mac(key, ciphertext)
-
-        keystore_dict = {
-            'version': '3',
-            'crypto': {
-                'cipher': cipher,
-                'cipherparams': cipher_params,
-                'kdf': kdf,
-                'kdfparams': kdf_params,
-                'mac': mac,
-                'ciphertext': ciphertext,
-            },
-        }
-
-        if expose_address:
-            keystore_dict['address'] = self.address
-
-        if uuid is True:
-            keystore_dict['id'] = str(uuid4())
-            # TODO: find out correct format, should include timestamp
-        elif uuid is not None:
-            keystore_dict['id'] = str(uuid)
-
-        return keystore_dict
-
-    def sign_message(self, message, hash=True, encoding='iso-8859-1'):
-        return sign_message(message, self.private_key, hash, encoding)
+        :param message: the message to sign
+        :param hash: if the message is hashed before it is signed
+        :returns: the created signature
+        """
+        return sign_message(message, self.private_key, hash)
 
     def sign_transaction(self, transaction, network_id):
+        """Sign a transaction.
+
+        .. warning::
+
+            This method overwrites any potentially already existing signature.
+
+        :param transaction: the transaction to sign as an :class:`rlp.Serializable` object
+        :param int network_id: the id of the target network
+        :returns: the signed transaction
+        """
         return sign_transaction(transaction, self.private_key, network_id)
 
-    def is_signer(self, signature, message, hash=True, encoding='iso-8859-1'):
-        return verify_signature(signature, message, self.address, hash=hash, encoding=encoding)
+    def is_signer(self, signature, message, hash=True):
+        """``True`` if the account has signed a given message, otherwise ``False``.
+
+        :param signature: the signature to check
+        :param message: the signed message
+        :param hash: ``True`` is the message was hashed before signing, otherwise ``False``
+        """
+        recovered_signer = recover_signer(signature, message, hash=hash)
+        return is_same_address(recovered_signer, self.address)
+
+    def is_sender(self, transaction, network_id):
+        """``True`` if the account is the sender of the given transaction, otherwise ``False``.
+
+        :param transaction: the signed transaction as an :class:`rlp.Serializable` object
+        :param network_id: the target network id
+        """
+        recovered_sender = recover_sender(transaction)
+        return is_same_address(recovered_sender, self.address)
 
     def local_signing_middleware(self, make_request, web3):
-        """Creates a Web3 middleware that signs transactions originating from this account."""
+        """Creates a Web3 middleware that signs transactions originating from this account.
+
+        This method is not intended to be called manually, but be passed as is to
+        :meth:`Web3.add_middleware`:
+
+            >>> web.add_middleware(account.local_signing_middleware)
+
+        """
         def middleware(method, params):
             def ignore():
                 response = make_request(method, params)
@@ -208,6 +195,78 @@ class Account(object):
 
         return middleware
 
+    def to_keystore(self, f, password, expose_address=True, id=True, kdf='scrypt',
+                    kdf_params=None, cipher='aes-128-ctr', cipher_params=None, pretty=True):
+        """Export the account to a keystore file.
+
+        :param f: the writable target file
+        :param password: the password used to encrypt the private key
+        :param expose_address: ``True`` if the keystore should include the address in unencrypted
+                               form, otherwise ``False``
+        :param id: if ``True``, include a randomly generated UUID; if any truthy value, include
+                   this value as id; if falsy, omit the id
+        :param kdf: the key derivation function to use
+        :param kdf_params: dictionary of parameters for the KDF replacing the default ones or
+                           ``None`` to not replace any
+        :param cipher: the cipher function to use
+        :param cipher_params: dictionary of parameters for the cipher function replacing the
+                              default ones, or ``None`` to not replace any
+        :raises: :exc:`UnsupportedKeystore` if an unkown KDF or cipher is specified
+        :raises: :exc:`InvalidKeystore` if the KDF parameters are invalid
+        """
+        d = self.to_keystore_dict(password, expose_address, id, kdf, kdf_params,
+                                  cipher, cipher_params)
+        indent = 4 if pretty else None
+        json.dump(d, f, indent=indent)
+
+    def to_keystore_dict(self, password, expose_address=True, id=True, kdf='scrypt',
+                         kdf_params=None, cipher='aes-128-ctr', cipher_params=None):
+        """Export the account to a dictionary representing a keystore.
+
+        See :meth:`Account.to_keystore` for a description of the parameters.
+        """
+        private_key = self.private_key
+
+        if kdf not in kdfs:
+            raise UnsupportedKeystore('{} kdf not supported'.format(kdf))
+        kdf_params = {**kdf_param_generators[kdf](), **(kdf_params or {})}
+
+        if cipher not in ciphers:
+            raise UnsupportedKeystore('{} cipher not supported'.format(kdf))
+        cipher_params = {**cipher_param_generators[cipher](), **(cipher_params or {})}
+
+        validate_kdf_params = kdf_param_validators[kdf]
+        validate_kdf_params(kdf_params)
+        validate_cipher_params = cipher_param_validators[cipher]
+        validate_cipher_params(cipher_params)
+
+        key = kdfs[kdf](password, kdf_params)
+        ciphertext = encryptors[cipher](private_key, key[:32 + 2], cipher_params)
+        mac = calculate_mac(key, ciphertext)
+
+        keystore_dict = {
+            'version': '3',
+            'crypto': {
+                'cipher': cipher,
+                'cipherparams': cipher_params,
+                'kdf': kdf,
+                'kdfparams': kdf_params,
+                'mac': mac,
+                'ciphertext': ciphertext,
+            },
+        }
+
+        if expose_address:
+            keystore_dict['address'] = self.address
+
+        if id is True:
+            keystore_dict['id'] = str(uuid4())
+            # TODO: find out correct format, should include timestamp
+        elif id:
+            keystore_dict['id'] = str(id)
+
+        return keystore_dict
+
     def __repr__(self):
         object_id = hex(id(self))
         address = self.address[:4 + 2] + '...'
@@ -223,8 +282,17 @@ class KeystoreAccount(Account):
 
     @property
     def exposed_address(self):
+        """The address as found in the keystore or ``None`` if it is not included."""
         try:
             return to_checksum_address(self.keystore_dict['address'])
+        except KeyError:
+            return None
+
+    @property
+    def id(self):
+        """The ID included in the keystore or ``None`` if there is none."""
+        try:
+            return self.keystore_dict['id']
         except KeyError:
             return None
 

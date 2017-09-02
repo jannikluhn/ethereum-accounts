@@ -9,45 +9,47 @@ from eth_utils import (
     big_endian_to_int,
     decode_hex,
     encode_hex,
-    force_bytes,
     keccak,
     int_to_big_endian,
-    is_same_address,
     remove_0x_prefix,
 )
 
 from .utils import (
+    normalize_message,
     normalize_private_key,
     normalize_signature,
     public_key_to_address,
 )
 
 
-def sign_message(message, private_key, hash=True, encoding='iso-8859-1'):
+def sign_message(message, private_key, hash=True):
     """Sign a message using a private key.
 
-    :param private_key: the hex encoded private key that should be used to sign the message
-    :param message: the hex encoded message to sign
+    :param private_key: the private key that should be used to sign the message
+    :param message: message to sign
     :param hash: if true, the message will be hashed before signing it
-    :returns: the hex encoded, '0x'-prefixed signature
+    :returns: the created signature
     """
     private_key = normalize_private_key(private_key)
-    message = force_bytes(message, encoding)
-
+    message = normalize_message(message)
     if hash:
         to_sign = keccak(message)
     else:
         to_sign = message
-
     private_key_object = PrivateKey.from_hex(remove_0x_prefix(private_key))
     signature = private_key_object.sign_recoverable(to_sign, hasher=None)
     return encode_hex(signature)
 
 
-def recover_signer(signature, message, hash=True, encoding='iso-8859-1'):
-    """Return the address corresponding to the private key that has signed a message."""
+def recover_signer(signature, message, hash=True):
+    """Return the address corresponding to the private key that has signed a message.
+
+    :param signature: the signature to check
+    :param message: the message that has been signed
+    :param hash: true if the message has been hashed before it was signed, otherwise false
+    """
     signature = normalize_signature(signature)
-    message = force_bytes(message, encoding)
+    message = normalize_message(message)
     if hash:
         message = keccak(message)
     public_key_object = PublicKey.from_signature_and_message(decode_hex(signature), message,
@@ -55,28 +57,24 @@ def recover_signer(signature, message, hash=True, encoding='iso-8859-1'):
     return public_key_to_address(public_key_object.format(compressed=False))
 
 
-def verify_signature(signature, message, address, hash=True, encoding='iso-8859-1'):
-    """Verify that a message has been signed by the owner of an account.
-
-    :param signature: the signature to verify
-    :param message: the message that has been signed
-    :param address: the address of the assumed owner
-    :param hash: if `True` it is assumed that the message has been hashed before signing it
-    :param encoding: if the message is passed in form of a string, it is decoded according to this
-                     encoding
-    :returns: `True` or `False`
-    """
-    signer = recover_signer(signature, message, hash, encoding)
-    return is_same_address(signer, address)
-
-
-def prepare_ethereum_message(message, encoding='iso-8859-1'):
-    message = force_bytes(message, encoding)
+def prepare_ethereum_message(message):
+    message = normalize_message(message)
     to_hash = b'\x19Ethereum Signed Message:\n' + int_to_big_endian(len(message)) + message
     return to_hash
 
 
 def sign_transaction(transaction, private_key, network_id):
+    """Sign a transaction with a private key.
+
+    .. warning::
+
+        This method overwrites any potentially already existing signature.
+
+    :param transaction: the transaction to sign as an :class:`rlp.Serializable` object
+    :param private_key: the private key to sign with
+    :param int network_id: the id of the target network
+    :returns: the signed transaction
+    """
     transaction.v = network_id
     transaction.r = 0
     transaction.s = 0
@@ -93,3 +91,7 @@ def get_vrs(signature):
     s = signature[32:64]
     v = signature[64:]
     return tuple(big_endian_to_int(x) for x in [v, r, s])
+
+
+def recover_sender(transaction, network_id):
+    pass
