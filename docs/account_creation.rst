@@ -7,7 +7,9 @@ Accordingly, three methods are available to create account objects:
 
     >>> from eth_accounts import Account
     >>> account = Account.from_private_key('0xff')
-    >>> another_account = Account.from_keystore('keystore.json', b'password')
+    >>> with open('tests/testdata/pbkdf2_keystore_template.json') as f:
+    ...     another_account = Account.from_keystore(f, b'password')
+    ...
     >>> third_account = Account.new()
 
 After initialization, the private key as well as the inferred public key and address are accessible
@@ -27,8 +29,8 @@ in the keystore in plain text (which usually but not necessarily is the same as 
 and an identifier:
 
     >>> account.exposed_address
-    0x5044a80bD3eff58302e638018534BbDA8896c48A
+    '0x88e422c8c5f12F7a484c7BBd070b14A027d55364'
     >>> account.id
-    TODO
+    '386aff9b-9e44-4b3c-b731-37d64726e757'
 
 If those are not available, they fall back to ``None``.
