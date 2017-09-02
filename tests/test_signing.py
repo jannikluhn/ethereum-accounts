@@ -1,17 +1,17 @@
 import pytest
 
 from eth_utils import (
+    encode_hex,
     is_same_address,
-    keccak
+    keccak,
+    remove_0x_prefix,
 )
 
 from eth_accounts import (
     Account,
-    get_vrs,
     prepare_ethereum_message,
     recover_signer,
     sign_message,
-    verify_signature,
 )
 
 
@@ -28,16 +28,13 @@ def test_sign(account):
     signature = sign_message(message, account.private_key)
     assert signature == target
 
+    assert sign_message(encode_hex(message), account.private_key) == signature
+    assert sign_message(remove_0x_prefix(encode_hex(message)), account.private_key) == signature
+
     # manual hashing
     message_hash = keccak(message)
     signature = sign_message(message_hash, account.private_key, hash=False)
     assert signature == target
-
-
-def test_verification(account):
-    message = b'test'
-    signature = sign_message(message, account.private_key)
-    assert verify_signature(signature, message, account.address)
 
 
 def test_signer_recovery(account):
@@ -49,15 +46,7 @@ def test_signer_recovery(account):
 
 def test_ethereum_message_preparation(account):
     message = b'test'
-    target = ('0xfe28833983d6faa0715c7e8c3873c725ddab6fa5bf84d40e780676e463e6bea2'
-              '0fc6aea97dc273a98eb26b0914e224c8dd5c615ceaab69ddddcf9b0ae3de0e371c')
     ethereum_message = prepare_ethereum_message(message)
-    signature = sign_message(ethereum_message, account.private_key)
-    assert signature == target
-
-
-def test_vrs(account):
-    message = b'test'
-    signature = sign_message(message, account.private_key)
-    v, r, s = get_vrs(signature)
-    assert False  # TODO: target?
+    assert ethereum_message == b'\x19Ethereum Signed Message:\n4test'
+    assert prepare_ethereum_message(encode_hex(message)) == ethereum_message
+    assert prepare_ethereum_message(remove_0x_prefix(encode_hex(message))) == ethereum_message

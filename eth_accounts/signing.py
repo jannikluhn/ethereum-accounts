@@ -59,7 +59,7 @@ def recover_signer(signature, message, hash=True):
 
 def prepare_ethereum_message(message):
     message = normalize_message(message)
-    to_hash = b'\x19Ethereum Signed Message:\n' + int_to_big_endian(len(message)) + message
+    to_hash = b'\x19Ethereum Signed Message:\n' + bytes(str(len(message)), 'ascii') + message
     return to_hash
 
 
