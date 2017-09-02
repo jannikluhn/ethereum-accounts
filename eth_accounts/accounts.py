@@ -144,7 +144,7 @@ class Account(object):
         :param transaction: the signed transaction as an :class:`rlp.Serializable` object
         :param network_id: the target network id
         """
-        recovered_sender = recover_sender(transaction)
+        recovered_sender = recover_sender(transaction, network_id)
         return is_same_address(recovered_sender, self.address)
 
     def local_signing_middleware(self, make_request, web3):

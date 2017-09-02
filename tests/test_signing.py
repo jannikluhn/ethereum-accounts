@@ -10,8 +10,12 @@ from eth_utils import (
 from eth_accounts import (
     Account,
     prepare_ethereum_message,
+    recover_sender,
     recover_signer,
     sign_message,
+)
+from eth_accounts.utils import (
+    Transaction
 )
 
 
@@ -20,7 +24,7 @@ def account():
     return Account.from_private_key(1)
 
 
-def test_sign(account):
+def test_sign_message(account):
     message = b'test'
     target = ('0xbb958903eb2617ebb142d54c20df2c4eb46159e2c717b0240037336418cb8ed3'
               '59f4d1342c037dd7bec0deacdbba00fac2fa9f50a51865bbe474bc706175675e00')
@@ -50,3 +54,17 @@ def test_ethereum_message_preparation(account):
     assert ethereum_message == b'\x19Ethereum Signed Message:\n4test'
     assert prepare_ethereum_message(encode_hex(message)) == ethereum_message
     assert prepare_ethereum_message(remove_0x_prefix(encode_hex(message))) == ethereum_message
+
+
+def test_sign_transaction(account):
+    tx = Transaction(0, 1, 2, bytes(20), 3, b'\ff', 0, 0, 0)
+    account.sign_transaction(tx, 14)
+    v, r, s = tx.v, tx.r, tx.s
+    assert v != 0 and r != 0 and s != 0
+    assert account.is_sender(tx, 14)
+    recovered_sender = recover_sender(tx, 14)
+    assert is_same_address(recovered_sender, account.address)
+    with pytest.raises(ValueError):
+        recover_sender(tx, 13)
+    account.sign_transaction(tx, 13)
+    assert (v, r, s) != (tx.v, tx.r, tx.s)

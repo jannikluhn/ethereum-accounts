@@ -9,7 +9,9 @@ from eth_utils import (
     big_endian_to_int,
     decode_hex,
     encode_hex,
+    int_to_big_endian,
     keccak,
+    pad_left,
     remove_0x_prefix,
 )
 
@@ -18,6 +20,7 @@ from .utils import (
     normalize_private_key,
     normalize_signature,
     public_key_to_address,
+    Transaction,
 )
 
 
@@ -92,5 +95,35 @@ def get_vrs(signature):
     return tuple(big_endian_to_int(x) for x in [v, r, s])
 
 
+def concat_vrs(v, r, s):
+    r_bytes = pad_left(int_to_big_endian(r), 32, '\0')
+    s_bytes = pad_left(int_to_big_endian(s), 32, '\0')
+    v_bytes = int_to_big_endian(v)
+    return encode_hex(r_bytes + s_bytes + v_bytes)
+
+
 def recover_sender(transaction, network_id):
-    pass
+    message = rlp.encode(Transaction(
+        transaction.nonce,
+        transaction.gasprice,
+        transaction.startgas,
+        transaction.to,
+        transaction.value,
+        transaction.data,
+        network_id,
+        0,
+        0
+    ))
+    if transaction.v - 35 - 2 < 0:
+        raise ValueError('Invalid signature')
+    if transaction.v - 35 - 2 * network_id < 0:
+        raise ValueError('Invalid signature or wrong network id')
+    signature = concat_vrs(transaction.v - 2 * network_id - 35, transaction.r, transaction.s)
+    try:
+        return recover_signer(signature, message)
+    except Exception as e:
+        # coincurve doesn't raise something more specific
+        if e.args == ('failed to recover ECDSA public key',):
+            raise ValueError('Invalid signature or wrong network id')
+        else:
+            raise
