@@ -29,7 +29,7 @@ in the keystore in plain text (which usually but not necessarily is the same as 
 and an identifier:
 
     >>> account.exposed_address
-    '0x88e422c8c5f12F7a484c7BBd070b14A027d55364'
+    '88e422c8c5f12f7a484c7bbd070b14a027d55364'
     >>> account.id
     '386aff9b-9e44-4b3c-b731-37d64726e757'
 
