@@ -8,6 +8,7 @@ from eth_utils import (
     encode_hex,
     is_same_address,
     keccak,
+    remove_0x_prefix,
     to_checksum_address,
 )
 import rlp
@@ -257,7 +258,7 @@ class Account(object):
         }
 
         if expose_address:
-            keystore_dict['address'] = self.address
+            keystore_dict['address'] = remove_0x_prefix(self.address).lower()
 
         if id is True:
             keystore_dict['id'] = str(uuid4())
@@ -340,4 +341,5 @@ def parse_keystore(keystore):
 
 
 def calculate_mac(key, ciphertext):
-    return encode_hex(keccak(decode_hex(key)[16:32] + decode_hex(ciphertext)))
+    mac = keccak(decode_hex(key)[16:32] + decode_hex(ciphertext))
+    return remove_0x_prefix(encode_hex(mac))

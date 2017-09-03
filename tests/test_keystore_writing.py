@@ -6,6 +6,7 @@ import uuid
 from eth_utils import (
     encode_hex,
     is_same_address,
+    remove_0x_prefix,
 )
 
 from eth_accounts import Account, UnsupportedKeystore
@@ -82,7 +83,7 @@ def test_kdf_params():
     assert keystore_dict['crypto']['kdfparams'] == kdf_params
 
     kdf_param_replacements = {
-        'salt': encode_hex(os.urandom(16)),
+        'salt': remove_0x_prefix(encode_hex(os.urandom(16))),
     }
     keystore_dict = account.to_keystore_dict(b'password', kdf_params=kdf_param_replacements)
     assert keystore_dict['crypto']['kdfparams']['salt'] == kdf_param_replacements['salt']

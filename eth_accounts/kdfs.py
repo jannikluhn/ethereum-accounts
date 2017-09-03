@@ -4,6 +4,7 @@ import os
 from eth_utils import (
     decode_hex,
     encode_hex,
+    is_0x_prefixed,
     is_hex,
     remove_0x_prefix,
 )
@@ -39,6 +40,8 @@ def validate_pbkdf2_params(kdf_params):
         raise InvalidKeystore('PBKDF2 key length must be greater than or equal to 32')
     if not is_hex(kdf_params['salt']):
         raise InvalidKeystore('PBKDF2 salt value must be hex encoded')
+    if is_0x_prefixed(kdf_params['salt']):
+        raise InvalidKeystore('PBKDF2 salt value must not have 0x prefix')
 
     if kdf_params['c'] <= 0:
         raise InvalidKeystore('PBKDF2 iteration number must be positive')
@@ -71,6 +74,8 @@ def validate_scrypt_params(kdf_params):
         raise InvalidKeystore('scrypt parallelization parameter p must be integer')
     if not is_hex(kdf_params['salt']):
         raise InvalidKeystore('scrypt salt value must be hex encoded')
+    if is_0x_prefixed(kdf_params['salt']):
+        raise InvalidKeystore('scrypt salt value must not have 0x prefix')
 
     if kdf_params['dklen'] <= 0:
         raise InvalidKeystore('scrypt key length must be positive')
@@ -107,9 +112,9 @@ def derive_scrypt_key(password, params):
 def generate_pbkdf2_params():
     return {
         'dklen': 32,
-        'c': 262144,
+        'c': 10240,
         'prf': 'hmac-sha256',
-        'salt': remove_0x_prefix(encode_hex(os.urandom(16))),
+        'salt': remove_0x_prefix(encode_hex(os.urandom(32))),
     }
 
 
@@ -117,9 +122,9 @@ def generate_scrypt_params():
     return {
         'dklen': 32,
         'n': 262144,
-        'r': 1,
-        'p': 8,
-        'salt': remove_0x_prefix(encode_hex(os.urandom(16))),
+        'r': 8,
+        'p': 1,
+        'salt': remove_0x_prefix(encode_hex(os.urandom(32))),
     }
 
 

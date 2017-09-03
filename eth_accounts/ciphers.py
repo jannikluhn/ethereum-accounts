@@ -5,6 +5,8 @@ from Crypto.Util import Counter
 from eth_utils import (
     decode_hex,
     encode_hex,
+    is_0x_prefixed,
+    is_hex,
     remove_0x_prefix,
 )
 
@@ -16,7 +18,7 @@ def encrypt_aes_128_ctr(private_key, key, params):
     counter = Counter.new(128, initial_value=iv, allow_wraparound=True)
     cipher = AES.new(decode_hex(key), mode=AES.MODE_CTR, counter=counter)
     ciphertext = cipher.encrypt(decode_hex(private_key))
-    return encode_hex(ciphertext)
+    return remove_0x_prefix(encode_hex(ciphertext))
 
 
 def decrypt_aes_128_ctr(ciphertext, key, params):
@@ -24,13 +26,16 @@ def decrypt_aes_128_ctr(ciphertext, key, params):
     counter = Counter.new(128, initial_value=iv, allow_wraparound=True)
     cipher = AES.new(decode_hex(key), mode=AES.MODE_CTR, counter=counter)
     private_key = cipher.decrypt(decode_hex(ciphertext))
-    return encode_hex(private_key)
+    return remove_0x_prefix(encode_hex(private_key))
 
 
 def validate_aes_128_ctr_params(params):
     if 'iv' not in params:
         raise InvalidKeystore('no cipher initialization vector')
-    # TODO: validate param itself
+    if not is_hex(params['iv']):
+        raise InvalidKeystore('cipher initialization vector must be hex encoded')
+    if is_0x_prefixed(params['iv']):
+        raise InvalidKeystore('cipher initialization vector must not have 0x prefix')
 
 
 def generate_aes_128_ctr_params():

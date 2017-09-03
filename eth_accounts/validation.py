@@ -1,8 +1,10 @@
 from collections import Mapping
 
 from eth_utils import (
+    is_0x_prefixed,
     is_checksum_address,
     is_checksum_formatted_address,
+    is_hex,
     is_hex_address,
 )
 
@@ -87,10 +89,18 @@ def validate_keystore(keystore):
     validate_kdf_params = kdf_param_validators[kdf]
     validate_kdf_params(kdf_params)
 
+    # MAC
+    if not is_hex(crypto['mac']):
+        raise InvalidKeystore('MAC must be hex encoded')
+    if is_0x_prefixed(crypto['mac']):
+        raise InvalidKeystore('MAC must not have 0x prefix')
+
     # address
     if 'address' in keystore:
         address = keystore['address']
         if not is_hex_address(address):
-            raise InvalidKeystore('address specified in invalid format')
+            raise InvalidKeystore('address must be hex encoded')
+        if is_0x_prefixed(address):
+            raise InvalidKeystore('address must not have 0x prefix')
         if is_checksum_formatted_address(address) and not is_checksum_address(address):
-            raise InvalidKeystore('address has wrong checksum')
+            raise InvalidKeystore('address must have correct or no checksum')
