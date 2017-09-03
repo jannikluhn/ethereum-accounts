@@ -13,21 +13,34 @@ for communication with Ethereum nodes.
 
 First, the middleware has to be registered:
 
->>> from web3 import Web3
->>> web3 = Web3()
->>> web3.add_middleware(account.local_signing_middleware)
+    >>> from web3 import Web3
+    >>> web3 = Web3(Web3.RPCProvider())
+    >>> web3.add_middleware(account.local_signing_middleware)
 
 Now, web3 can be used as usual, but all transactions originating from the account are signed
 locally:
 
->>> web3.eth.sendTransaction({'from': account.address, 'to': '0x' + '00' * 20, value: 10**18})
->>> contract = web3.eth.contract(address=address, abi=abi)
->>> contract.transact({'from': account.adderss}).vote()
+    >>> from eth_utils import denoms
+    >>> other_account = Account.from_private_key('0xaa')
+    >>> web3.eth.sendTransaction({
+    ...     'from': account.address,
+    ...     'to': other_account.address,
+    ...     'value': 10 * denoms.finney
+    ... })
+    '0xcb34b55f681a226b994cee10553978952ff82f5bc731a97131ce2b361e42ad75'
+    >>> web3.eth.getBalance(other_account.address) / denoms.finney
+    10.0
+
+    >>> token_contract = web3.eth.contract(address=contract_address, abi=contract_abi)
+    >>> token_contract.transact({'from': account.address}).transfer(other_account.address, 100000)
+    '0xde029a35e40809757ddd22a98a0e62da419e4f791eed20846a1eedad42a93c46'
+    >>> token_contract.call().balanceOf(other_account.address)
+    100000
 
 To extend this to other accounts, add them as middlewares as well:
 
->>> for account in [Account.new() for _ in range(10)]:
-...     web3.add_midleware(account)
+    >>> for account in [Account.new() for _ in range(10)]:
+    ...     web3.add_midleware(account)
 
 If for the specified sender no local signing middleware is registered, it goes through to the
 remote node unmodified.

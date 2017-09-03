@@ -35,16 +35,16 @@ The same applies to the cipher, but here only the canonical ``'aes-128-ctr'`` is
 Exposure of the address can be prevented by setting ``expose_address`` to ``False``:
 
     >>> keystore = account.to_keystore_dict(b'password', expose_address=False)
-    >>> assert account.from_keystore(keystore).exposed_account is None
+    >>> assert account.from_keystore(keystore, b'password').exposed_account is None
 
-Finally, the keystore's UUID can be customized. By default (``id=True``) a random ID will be
+Finally, the keystore's ID can be customized. By default (``id=True``) a random UUID will be
 generated. To use a custom value, pass it as the argument. Setting it to ``False`` nor ``None``
 will lead to no ID appearing in the keystore.
 
     >>> keystore = account.to_keystore_dict(b'password', id=None)
-    >>> assert account.from_keystore(keystore).id is None
+    >>> assert account.from_keystore(keystore, b'password').id is None
     >>> keystore = account.to_keystore_dict(b'password', id='some-random-id')
-    >>> assert account.from_keystore(keystore).id == 'some-random-id'
+    >>> assert account.from_keystore(keystore, b'password').id == 'some-random-id'
 
 
 .. note::
