@@ -1,4 +1,5 @@
 pytest
-ipython
+pytest-cov
+python-coveralls
 web3
 eth-testrpc
