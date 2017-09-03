@@ -30,6 +30,7 @@ from .kdfs import (
     kdfs,
 )
 from .utils import (
+    normalize_password,
     normalize_private_key,
     private_key_to_address,
     private_key_to_public_key,
@@ -44,7 +45,6 @@ from .signing import (
 )
 from .validation import (
     validate_keystore,
-    validate_password,
 )
 
 
@@ -298,7 +298,7 @@ class KeystoreAccount(Account):
             return None
 
     def _extract_private_key(self, password):
-        validate_password(password)
+        password = normalize_password(password)
         key = self._derive_key(password)
         self._validate_mac(key)
         self._private_key = self._decrypt_private_key(key)

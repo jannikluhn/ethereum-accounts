@@ -22,17 +22,7 @@ from .kdfs import (
 )
 
 
-def validate_password(password):
-    """Validate a password.
-
-    Passwords must have the type `bytes`.
-    """
-    if not isinstance(password, bytes):
-        raise TypeError('password must be bytes')
-
-
 def validate_keystore(keystore):
-    """Validate a keystore in dictionary format. Superfluous keys are allowed."""
     # version
     if 'version' not in keystore:
         raise InvalidKeystore('no version specified')

@@ -108,6 +108,13 @@ def normalize_signature(signature):
         raise TypeError('Signature must be either bytes or hex encoded string')
 
 
+def normalize_password(password):
+    if is_bytes(password):
+        return password
+    else:
+        raise TypeError('password must be bytes')
+
+
 class Transaction(rlp.Serializable):
 
     fields = [
