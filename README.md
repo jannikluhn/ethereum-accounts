@@ -1,6 +1,7 @@
 # Ethereum Accounts
 
 [![Build Status](https://travis-ci.org/jannikluhn/ethereum-accounts.svg?branch=master)](https://travis-ci.org/jannikluhn/ethereum-accounts)
+[![Coverage Status](https://coveralls.io/repos/github/jannikluhn/ethereum-accounts/badge.svg?branch=master)](https://coveralls.io/github/jannikluhn/ethereum-accounts?branch=master)
 
 This is a Python library for working with Ethereum accounts. Its main features are keystore import
 and export, as well as message and transaction signing. Seamless integration with
