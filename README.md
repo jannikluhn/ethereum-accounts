@@ -1,5 +1,7 @@
 # Ethereum Accounts
 
+[![Build Status](https://travis-ci.org/jannikluhn/ethereum-accounts.svg?branch=master)](https://travis-ci.org/jannikluhn/ethereum-accounts)
+
 This is a Python library for working with Ethereum accounts. Its main features are keystore import
 and export, as well as message and transaction signing. Seamless integration with
 [web3.py](https://github.com/pipermerriam/web3.py) using its middleware API allows sending
