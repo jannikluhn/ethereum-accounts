@@ -1,2 +1,3 @@
-pbkdf2_keystore_template.json and scrypt_keystore_template.json generated with ethereumjs-wallet
-version 0.6.0, password: `password`
+pbkdf2_keystore_template.json and scrypt_keystore_template.json generated with ethereumjs-wallet version 0.6.0, password: `password`
+parity_keystore.json with Parity/v1.7.0-beta-5f2cabd-20170727/x86_64-linux-gnu/rustc1.18.0
+geth_keystore.json with Geth 1.6.7-stable-ab5646c5
