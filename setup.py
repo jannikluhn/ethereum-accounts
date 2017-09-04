@@ -16,6 +16,7 @@ setup(
         'coincurve',
         'ethereum-utils',
         'pycrypto',
+        'rlp',
         'scrypt',
     ]
 )
