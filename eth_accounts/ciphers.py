@@ -1,16 +1,21 @@
 import os
+import json
 
 from Crypto.Cipher import AES
 from Crypto.Util import Counter
 from eth_utils import (
     decode_hex,
     encode_hex,
-    is_0x_prefixed,
-    is_hex,
     remove_0x_prefix,
 )
+import jsonschema
 
 from .exceptions import InvalidKeystore
+
+
+schema_path = os.path.join(os.path.dirname(__file__), 'schemas/cipher_aes128ctr_schema.json')
+with open(schema_path) as f:
+    cipher_schema = json.load(f)
 
 
 def encrypt_aes_128_ctr(private_key, key, params):
@@ -29,13 +34,11 @@ def decrypt_aes_128_ctr(ciphertext, key, params):
     return remove_0x_prefix(encode_hex(private_key))
 
 
-def validate_aes_128_ctr_params(params):
-    if 'iv' not in params:
-        raise InvalidKeystore('no cipher initialization vector')
-    if not is_hex(params['iv']):
-        raise InvalidKeystore('cipher initialization vector must be hex encoded')
-    if is_0x_prefixed(params['iv']):
-        raise InvalidKeystore('cipher initialization vector must not have 0x prefix')
+def validate_aes_128_ctr(keystore):
+    try:
+        jsonschema.validate(keystore['crypto'], cipher_schema)
+    except jsonschema.ValidationError:
+        raise InvalidKeystore('Invalid keystore cipher format')
 
 
 def generate_aes_128_ctr_params():
@@ -54,8 +57,8 @@ decryptors = {
     'aes-128-ctr': decrypt_aes_128_ctr,
 }
 
-cipher_param_validators = {
-    'aes-128-ctr': validate_aes_128_ctr_params,
+cipher_validators = {
+    'aes-128-ctr': validate_aes_128_ctr,
 }
 
 cipher_param_generators = {
@@ -64,4 +67,4 @@ cipher_param_generators = {
 
 
 assert all(set(d.keys()) == set(ciphers) for d in
-           [encryptors, decryptors, cipher_param_validators, cipher_param_generators])
+           [encryptors, decryptors, cipher_validators, cipher_param_generators])
