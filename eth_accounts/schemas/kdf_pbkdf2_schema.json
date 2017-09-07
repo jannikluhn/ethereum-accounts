@@ -1,0 +1,39 @@
+{
+  "$schema": "http://json-schema.org/schema#",
+  "type": "object",
+
+  "properties": {
+    "kdf": {
+      "type": "string",
+      "enum": ["pbkdf2"]
+    },
+    "kdfparams": {
+      "type": "object",
+      "requiredParams": [
+        "c",
+        "dklen",
+        "prf",
+        "salt"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "c": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "dklen": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "prf": {
+          "type": "string",
+          "enum": ["hmac-sha256"]
+        },
+        "salt": {
+          "type": "string",
+          "pattern": "^[0-f]{64}$"
+        }
+      }
+    }
+  }
+}

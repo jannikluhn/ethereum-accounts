@@ -1,0 +1,26 @@
+{
+  "$schema": "http://json-schema.org/schema#",
+  "type": "object",
+
+  "properties": {
+    "cipher": {
+      "type": "string",
+      "enum": ["aes-128-ctr"]
+    },
+    "cipherparams": {
+      "type": "object",
+      "requiredProperties": ["iv"],
+      "additionalProperties": false,
+      "properties": {
+        "iv": {
+          "type": "string",
+          "pattern": "^[0-f]{32}$"
+        }
+      }
+    },
+    "ciphertext": {
+      "type": "string",
+      "pattern": "^[0-f]{64}$"
+    }
+  }
+}
