@@ -15,6 +15,7 @@ setup(
     install_requires=[
         'coincurve',
         'ethereum-utils',
+        'jsonschema',
         'pycrypto',
         'rlp',
         'scrypt',
