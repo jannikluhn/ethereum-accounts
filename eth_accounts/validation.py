@@ -27,6 +27,8 @@ def validate_keystore(keystore):
         jsonschema.validate(keystore, keystore_schema)
     except jsonschema.ValidationError:
         raise InvalidKeystore('Invalid keystore format')
+    if keystore['version'] != 3:
+        raise UnsupportedKeystore('Only keystores of version 3 are supported')
     cipher = keystore['crypto']['cipher']
     if cipher not in ciphers:
         raise UnsupportedKeystore('Keystore unsupported due to unknown cipher "{}"'.format(cipher))

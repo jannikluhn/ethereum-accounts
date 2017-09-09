@@ -1,6 +1,11 @@
 {
   "$schema": "http://json-schema.org/schema#",
   "type": "object",
+  "required": [
+    "cipher",
+    "cipherparams",
+    "ciphertext"
+  ],
 
   "properties": {
     "cipher": {
@@ -9,18 +14,18 @@
     },
     "cipherparams": {
       "type": "object",
-      "requiredProperties": ["iv"],
+      "required": ["iv"],
       "additionalProperties": false,
       "properties": {
         "iv": {
           "type": "string",
-          "pattern": "^[0-f]{32}$"
+          "pattern": "^([0-9]|[a-f]){32}$"
         }
       }
     },
     "ciphertext": {
       "type": "string",
-      "pattern": "^[0-f]{64}$"
+      "pattern": "^([0-9]|[a-f]){64}$"
     }
   }
 }

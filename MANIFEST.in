@@ -1,0 +1,7 @@
+include README.md
+include LICENSE
+
+include eth_accounts/schemas/*.json
+
+recursive-include doc *
+prune doc/_build

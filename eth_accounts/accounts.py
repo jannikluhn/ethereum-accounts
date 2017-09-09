@@ -15,7 +15,7 @@ import rlp
 
 from .ciphers import (
     cipher_param_generators,
-    cipher_param_validators,
+    cipher_validators,
     ciphers,
     decryptors,
     encryptors,
@@ -26,7 +26,7 @@ from .exceptions import (
 )
 from .kdfs import (
     kdf_param_generators,
-    kdf_param_validators,
+    kdf_validators,
     kdfs,
 )
 from .utils import (
@@ -236,9 +236,9 @@ class Account(object):
             raise UnsupportedKeystore('{} cipher not supported'.format(kdf))
         cipher_params = {**cipher_param_generators[cipher](), **(cipher_params or {})}
 
-        validate_kdf_params = kdf_param_validators[kdf]
+        validate_kdf_params = kdf_validators[kdf]
         validate_kdf_params(kdf_params)
-        validate_cipher_params = cipher_param_validators[cipher]
+        validate_cipher_params = cipher_validators[cipher]
         validate_cipher_params(cipher_params)
 
         key = kdfs[kdf](password, kdf_params)

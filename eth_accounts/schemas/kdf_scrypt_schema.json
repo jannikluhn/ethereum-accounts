@@ -1,6 +1,10 @@
 {
   "$schema": "http://json-schema.org/schema#",
   "type": "object",
+  "required": [
+    "kdf",
+    "kdfparams"
+  ],
 
   "properties": {
     "kdf": {
@@ -9,7 +13,7 @@
     },
     "kdfparams": {
       "type": "object",
-      "requiredParams": [
+      "required": [
         "r",
         "p",
         "n",
@@ -36,7 +40,7 @@
         },
         "salt": {
           "type": "string",
-          "pattern": "^[0-f]{64}$"
+          "pattern": "^([0-9]|[a-f]){64}$"
         }
       }
     }

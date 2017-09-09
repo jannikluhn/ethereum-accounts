@@ -24,19 +24,19 @@ with open(scrypt_schema_path) as f:
 
 
 def validate_pbkdf2(keystore):
+    assert keystore['crypto']['kdf'] == 'pbkdf2'
     try:
         jsonschema.validate(keystore['crypto'], pbkdf2_schema)
     except jsonschema.ValidationError:
         raise InvalidKeystore('Invalid keystore KDF format')
-    # TODO: validate parameter values
 
 
 def validate_scrypt(keystore):
+    assert keystore['crypto']['kdf'] == 'scrypt'
     try:
         jsonschema.validate(keystore['crypto'], scrypt_schema)
     except jsonschema.ValidationError:
         raise InvalidKeystore('Invalid keystore KDF format')
-    # TODO: validate parameter values
 
 
 def derive_pbkdf2_key(password, params):
@@ -83,7 +83,7 @@ kdfs = {
     'scrypt': derive_scrypt_key,
 }
 
-kdf_param_validators = {
+kdf_validators = {
     'pbkdf2': validate_pbkdf2,
     'scrypt': validate_scrypt
 }
@@ -93,4 +93,4 @@ kdf_param_generators = {
     'scrypt': generate_scrypt_params,
 }
 
-assert all(set(d.keys()) == set(kdfs.keys()) for d in [kdf_param_validators, kdf_param_generators])
+assert all(set(d.keys()) == set(kdfs.keys()) for d in [kdf_validators, kdf_param_generators])
