@@ -1,5 +1,4 @@
 import pytest
-import copy
 import json
 import os
 
@@ -13,11 +12,7 @@ from eth_utils import (
 from eth_accounts import (
     Account,
     DecryptionError,
-    InvalidKeystore,
-    UnsupportedKeystore,
 )
-
-from eth_accounts.validation import validate_keystore
 
 
 testdata_directory = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'testdata')
@@ -57,37 +52,23 @@ def test_geth():
     assert account.id == '02068fb6-1388-45e1-9071-b8a379fd5474'
 
 
-@pytest.fixture
-def pbkdf2_keystore_template():
-    with open(pbkdf2_keystore_template_path) as f:
-        d = json.load(f)
-    return d
-
-
-@pytest.fixture
-def scrypt_keystore_template():
-    with open(scrypt_keystore_template_path) as f:
-        d = json.load(f)
-    return d
-
-
-def test_account_unlocking_fails_with_wrong_password(pbkdf2_keystore_template):
+def test_wrong_password(pbkdf2_keystore):
     wrong_passwords = [b'', b'asdf', b'PASSWORD']
     for password in wrong_passwords:
         with pytest.raises(DecryptionError):
-            Account.from_keystore(pbkdf2_keystore_template, password)
+            Account.from_keystore(pbkdf2_keystore, password)
 
 
-def test_account_password_type_checks(pbkdf2_keystore_template):
-    invalid_passwords = ['password', 123, None, pbkdf2_keystore_template]
+def test_account_password_type_checks(pbkdf2_keystore):
+    invalid_passwords = ['password', 123, None, pbkdf2_keystore]
     for password in invalid_passwords:
         with pytest.raises(TypeError):
-            Account.from_keystore(pbkdf2_keystore_template, password)
+            Account.from_keystore(pbkdf2_keystore, password)
 
 
-def test_exposed_address(pbkdf2_keystore_template):
-    account = Account.from_keystore(pbkdf2_keystore_template, b'password')
+def test_exposed_address(pbkdf2_keystore):
+    account = Account.from_keystore(pbkdf2_keystore, b'password')
     exposed_address = account.exposed_address
     assert is_checksum_address(exposed_address)
-    assert is_same_address(exposed_address, pbkdf2_keystore_template['address'])
+    assert is_same_address(exposed_address, pbkdf2_keystore['address'])
     assert is_same_address(exposed_address, account.address)

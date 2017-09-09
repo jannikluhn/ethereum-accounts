@@ -22,6 +22,7 @@ from .ciphers import (
 )
 from .exceptions import (
     DecryptionError,
+    InvalidKeystore,
     UnsupportedKeystore,
 )
 from .kdfs import (
@@ -236,17 +237,12 @@ class Account(object):
             raise UnsupportedKeystore('{} cipher not supported'.format(kdf))
         cipher_params = {**cipher_param_generators[cipher](), **(cipher_params or {})}
 
-        validate_kdf_params = kdf_validators[kdf]
-        validate_kdf_params(kdf_params)
-        validate_cipher_params = cipher_validators[cipher]
-        validate_cipher_params(cipher_params)
-
         key = kdfs[kdf](password, kdf_params)
         ciphertext = encryptors[cipher](private_key, key[:32 + 2], cipher_params)
         mac = calculate_mac(key, ciphertext)
 
         keystore_dict = {
-            'version': '3',
+            'version': 3,
             'crypto': {
                 'cipher': cipher,
                 'cipherparams': cipher_params,
@@ -257,6 +253,11 @@ class Account(object):
             },
         }
 
+        validate_kdf_params = kdf_validators[kdf]
+        validate_kdf_params(keystore_dict)
+        validate_cipher_params = cipher_validators[cipher]
+        validate_cipher_params(keystore_dict)
+
         if expose_address:
             keystore_dict['address'] = remove_0x_prefix(self.address).lower()
 
@@ -265,6 +266,11 @@ class Account(object):
             # TODO: find out correct format, should include timestamp
         elif id:
             keystore_dict['id'] = str(id)
+
+        try:
+            validate_keystore(keystore_dict)
+        except InvalidKeystore:
+            assert False
 
         return keystore_dict
 
