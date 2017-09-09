@@ -7,6 +7,8 @@ from eth_utils import (
     force_bytes,
     is_checksum_address,
     is_same_address,
+    pad_left,
+    remove_0x_prefix,
 )
 
 from eth_accounts import (
@@ -17,6 +19,7 @@ from eth_accounts import (
 
 testdata_directory = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'testdata')
 official_test_vector_path = os.path.join(testdata_directory, 'official_keystore_tests.json')
+geth_test_vector_path = os.path.join(testdata_directory, 'geth_keystore_tests.json')
 pbkdf2_keystore_template_path = os.path.join(testdata_directory, 'pbkdf2_keystore_template.json')
 scrypt_keystore_template_path = os.path.join(testdata_directory, 'scrypt_keystore_template.json')
 parity_keystore_path = os.path.join(testdata_directory, 'parity_keystore.json')
@@ -32,6 +35,20 @@ def test_official_vectors():
 
         account = Account.from_keystore(keystore, password)
         assert account.private_key == private_key
+
+        assert account.exposed_address is None
+
+
+def test_geth_vectors():
+    tests = json.load(open(geth_test_vector_path))
+    for name, test in tests.items():
+        keystore = test['json']
+        password = force_bytes(test['password'])
+        private_key = add_0x_prefix(test['priv'])
+
+        account = Account.from_keystore(keystore, password)
+        assert (remove_0x_prefix(account.private_key) ==
+                pad_left(remove_0x_prefix(private_key), 64, '00'))
 
         assert account.exposed_address is None
 

@@ -25,7 +25,7 @@
     },
     "ciphertext": {
       "type": "string",
-      "pattern": "^([0-9]|[a-f]){64}$"
+      "pattern": "^(([0-9]|[a-f]){2}){0,32}$"
     }
   }
 }

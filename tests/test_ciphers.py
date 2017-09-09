@@ -15,7 +15,11 @@ from eth_accounts import InvalidKeystore
 
 
 def test_valid_aes128ctr_ciphertext(keystore):
-    valid_ciphertexts = ['0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef']
+    ciphertext_template = '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef'
+    valid_ciphertexts = [
+        ciphertext_template,
+        ciphertext_template[:-2]
+    ]
     for ciphertext in valid_ciphertexts:
         keystore['crypto']['ciphertext'] = ciphertext
         validate_aes_128_ctr(keystore)
@@ -24,7 +28,7 @@ def test_valid_aes128ctr_ciphertext(keystore):
 def test_invalid_aes128ctr_ciphertext(keystore):
     ciphertext_template = '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef'
     invalid_ciphertexts = [
-        ciphertext_template[:-2],
+        ciphertext_template[:-1],
         ciphertext_template + '01',
         'gg' * 32,
         ciphertext_template.upper(),
