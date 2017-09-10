@@ -4,15 +4,14 @@ from rlp.sedes import big_endian_int, binary, Binary
 from coincurve import PrivateKey
 from eth_utils import (
     add_0x_prefix,
+    big_endian_to_int,
     decode_hex,
     encode_hex,
-    int_to_big_endian,
     is_bytes,
     is_hex,
     is_integer,
     is_text,
     keccak,
-    pad_left,
     remove_0x_prefix,
     to_checksum_address,
 )
@@ -55,35 +54,37 @@ def public_key_to_address(public_key):
 
 
 def normalize_private_key(private_key):
+    # convert to int
     if is_integer(private_key):
-        if private_key <= 0:
-            raise ValueError('Private key out of allowed range')
-        private_key = encode_hex(int_to_big_endian(private_key))
+        pass
     elif is_bytes(private_key):
-        private_key = encode_hex(private_key)
+        private_key = big_endian_to_int(private_key)
     elif is_text(private_key):
         if not is_hex(private_key):
             raise ValueError('Private key must be hex encoded if of type string')
-        private_key = add_0x_prefix(private_key).lower()
+        private_key = big_endian_to_int(decode_hex(private_key))
     else:
         raise TypeError('Private key must be either bytes, integer, or hex encoded string')
-    private_key = pad_left(remove_0x_prefix(private_key), 2 * PRIVATE_KEY_SIZE, '0')
+    # check if valid and convert to hex
     try:
-        PrivateKey.from_hex(remove_0x_prefix(private_key))
-    except ValueError:
+        private_key = PrivateKey.from_int(private_key)
+    except (ValueError, OverflowError):
         raise ValueError('Private key out of allowed range')
-    return add_0x_prefix(private_key)
+    return add_0x_prefix(private_key.to_hex())
 
 
 def normalize_public_key(public_key):
     if is_bytes(public_key):
-        return encode_hex(public_key)
+        public_key = encode_hex(public_key)
     elif is_text(public_key):
         if not is_hex(public_key):
             raise ValueError('Public key must be hex encoded if of type string')
-        return add_0x_prefix(public_key).lower()
+        public_key = add_0x_prefix(public_key).lower()
     else:
         raise TypeError('Public key must be either bytes or hex encoded string')
+    if len(public_key) != 2 + 65 * 2:
+        raise ValueError('Public keys must be 65 bytes long (uncompressed format is used)')
+    return public_key
 
 
 def normalize_message(message):
@@ -99,13 +100,16 @@ def normalize_message(message):
 
 def normalize_signature(signature):
     if is_bytes(signature):
-        return encode_hex(signature)
+        signature = encode_hex(signature)
     elif is_text(signature):
         if not is_hex(signature):
             raise ValueError('signature must be hex encoded if of type string')
-        return add_0x_prefix(signature).lower()
+        signature = add_0x_prefix(signature).lower()
     else:
         raise TypeError('Signature must be either bytes or hex encoded string')
+    if len(signature) != 2 + 65 * 2:
+        raise ValueError('Signature must be 65 bytes long')
+    return signature
 
 
 def normalize_password(password):
