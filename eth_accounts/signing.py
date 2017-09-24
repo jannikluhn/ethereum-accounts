@@ -120,10 +120,14 @@ def recover_sender(transaction, network_id):
         raise ValueError('Invalid signature or wrong network id')
     signature = concat_vrs(transaction.v - 2 * network_id - 35, transaction.r, transaction.s)
     try:
+        signature = normalize_signature(signature)
+    except ValueError:
+        raise ValueError('Invalid signature')
+    try:
         return recover_signer(signature, message)
-    except Exception as e:
+    except Exception as exception:
         # coincurve doesn't raise something more specific
-        if e.args == ('failed to recover ECDSA public key',):
+        if exception.args == ('failed to recover ECDSA public key',):
             raise ValueError('Invalid signature or wrong network id')
         else:
             raise
