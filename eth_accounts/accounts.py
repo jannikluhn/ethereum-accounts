@@ -168,15 +168,19 @@ class Account(object):
 
             transaction = params[0]
             if 'from' not in transaction:
-                return ignore()
+                # can not be reached right now (if 'from' is missing, web3 inserts defaultAccount
+                # prior to middlewares)
+                return ignore()  # pragma: no cover
             sender = transaction['from']
             if not is_same_address(sender, self.address):
                 return ignore()
 
-            if 'gas' in transaction:
-                gas = transaction['gas']
-            else:
-                gas = web3.eth.estimateGas(transaction)
+            if 'gas' not in transaction:
+                # can not be reached right now (if 'gas' is missing, web3 estimates gas prior to
+                # middlewares)
+                raise NotImplementedError('gas must be provided explicitly for locally signed '
+                                          'transactions')  # pragma: no cover
+            gas = transaction['gas']
 
             # construct raw transaction
             network_id = int(web3.net.version)
