@@ -1,6 +1,6 @@
-import pytest
 import json
 import os
+import pytest
 
 from eth_utils import (
     add_0x_prefix,
@@ -15,6 +15,7 @@ from eth_accounts import (
     Account,
     DecryptionError,
 )
+from eth_accounts.accounts import parse_keystore
 
 
 testdata_directory = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'testdata')
@@ -69,6 +70,13 @@ def test_geth():
     assert account.id == '02068fb6-1388-45e1-9071-b8a379fd5474'
 
 
+def test_invalid_type():
+    invalid_keystores = [None, 0, 0.0]
+    for keystore in invalid_keystores:
+        with pytest.raises(TypeError):
+            parse_keystore(keystore)
+
+
 def test_wrong_password(pbkdf2_keystore):
     wrong_passwords = [b'', b'asdf', b'PASSWORD']
     for password in wrong_passwords:
@@ -89,3 +97,14 @@ def test_exposed_address(pbkdf2_keystore):
     assert is_checksum_address(exposed_address)
     assert is_same_address(exposed_address, pbkdf2_keystore['address'])
     assert is_same_address(exposed_address, account.address)
+    
+    pbkdf2_keystore.pop('address')
+    account = Account.from_keystore(pbkdf2_keystore, b'password')
+    assert account.exposed_address is None
+
+
+def test_id(pbkdf2_keystore):
+    account = Account.from_keystore(pbkdf2_keystore, b'password')
+    assert account.id == pbkdf2_keystore['id']
+    pbkdf2_keystore.pop('id')
+    assert account.id is None

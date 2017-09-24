@@ -269,7 +269,7 @@ class Account(object):
 
         try:
             validate_keystore(keystore_dict)
-        except InvalidKeystore:
+        except InvalidKeystore:  # pragma: no cover
             assert False
 
         return keystore_dict

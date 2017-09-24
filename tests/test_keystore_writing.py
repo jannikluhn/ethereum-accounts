@@ -10,8 +10,11 @@ from eth_utils import (
 )
 
 from eth_accounts import Account, UnsupportedKeystore
-from eth_accounts.kdfs import kdf_param_generators
 from eth_accounts.ciphers import cipher_param_generators
+from eth_accounts.kdfs import (
+    kdf_param_generators,
+    kdf_validators,
+)
 
 
 def test_validity():
@@ -72,6 +75,8 @@ def test_kdf():
     for kdf in kdfs:
         keystore_dict = account.to_keystore_dict(b'password', kdf=kdf)
         assert keystore_dict['crypto']['kdf'] == kdf
+        kdf_validators[kdf](keystore_dict)  # should not raise
+
     with pytest.raises(UnsupportedKeystore):
         account.to_keystore_dict(b'password', kdf='test')
 
@@ -87,7 +92,7 @@ def test_kdf_params():
     }
     keystore_dict = account.to_keystore_dict(b'password', kdf_params=kdf_param_replacements)
     assert keystore_dict['crypto']['kdfparams']['salt'] == kdf_param_replacements['salt']
-    Account.from_keystore(keystore_dict, b'password')  # tests that other params are still there
+    kdf_validators['scrypt'](keystore_dict)  # should not raise
 
 
 def test_write_to_file():
