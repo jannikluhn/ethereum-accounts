@@ -3,7 +3,8 @@ Keystore Export
 
 Exporting accounts to keystore files is possible via the :meth:`Account.to_keystore` method:
 
-    >>> account.to_keystore(open('keystore.json', 'w'), b'password')
+    >>> with open('keystore.json', 'w') as keystore_file:
+    ...     account.to_keystore(keystore_file, b'password')
 
 Instead of writing the keystore to a file, it can also be returned in form of a dictionary:
 
@@ -38,8 +39,8 @@ Exposure of the address can be prevented by setting ``expose_address`` to ``Fals
     >>> assert account.from_keystore(keystore, b'password').exposed_account is None
 
 Finally, the keystore's ID can be customized. By default (``id=True``) a random UUID will be
-generated. To use a custom value, pass it as the argument. Setting it to ``False`` nor ``None``
-will lead to no ID appearing in the keystore.
+generated. To use a custom value, pass it as the argument. Setting it to ``False`` or ``None``
+will result in no ID appearing in the keystore.
 
     >>> keystore = account.to_keystore_dict(b'password', id=None)
     >>> assert account.from_keystore(keystore, b'password').id is None

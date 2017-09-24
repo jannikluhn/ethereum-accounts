@@ -7,8 +7,8 @@ Accordingly, three methods are available to create account objects:
 
     >>> from eth_accounts import Account
     >>> account = Account.from_private_key('0xff')
-    >>> with open('tests/testdata/pbkdf2_keystore_template.json') as f:
-    ...     another_account = Account.from_keystore(f, b'password')
+    >>> with open('tests/testdata/pbkdf2_keystore_template.json') as keystore_file:
+    ...     another_account = Account.from_keystore(keystore_file, b'password')
     ...
     >>> third_account = Account.new()
 
