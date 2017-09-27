@@ -38,14 +38,14 @@ Exposure of the address can be prevented by setting ``expose_address`` to ``Fals
     >>> keystore = account.to_keystore_dict(b'password', expose_address=False)
     >>> assert account.from_keystore(keystore, b'password').exposed_account is None
 
-Finally, the keystore's ID can be customized. By default (``id=True``) a random UUID will be
+Finally, the keystore's ID can be customized. By default (``uuid=True``) a random UUID will be
 generated. To use a custom value, pass it as the argument. Setting it to ``False`` or ``None``
 will result in no ID appearing in the keystore.
 
-    >>> keystore = account.to_keystore_dict(b'password', id=None)
-    >>> assert account.from_keystore(keystore, b'password').id is None
-    >>> keystore = account.to_keystore_dict(b'password', id='some-random-id')
-    >>> assert account.from_keystore(keystore, b'password').id == 'some-random-id'
+    >>> keystore = account.to_keystore_dict(b'password', uuid=None)
+    >>> assert account.from_keystore(keystore, b'password').uuid is None
+    >>> keystore = account.to_keystore_dict(b'password', uuid='some-random-id')
+    >>> assert account.from_keystore(keystore, b'password').uuid == 'some-random-id'
 
 
 .. note::
@@ -53,4 +53,4 @@ will result in no ID appearing in the keystore.
    Importing an account from a keystore file and exporting it again will by default lead to
    keystores with different IDs. If this is not desired, make it explicit:
 
-       >>> keystore = account.to_keystore_dict(b'password', id=account.id)
+       >>> keystore = account.to_keystore_dict(b'password', uuid=account.uuid)

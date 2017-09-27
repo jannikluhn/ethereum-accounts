@@ -39,16 +39,16 @@ def test_exposed_address():
 
 def test_id():
     account = Account.new()
-    keystore_dict_with_default_uuid = account.to_keystore_dict(b'password', id=True)
+    keystore_dict_with_default_uuid = account.to_keystore_dict(b'password', uuid=True)
     assert 'id' in keystore_dict_with_default_uuid
     uuid.UUID(keystore_dict_with_default_uuid['id'])  # validates UUID
 
     custom_uuid = uuid.uuid4()
-    keystore_dict_with_custom_uuid = account.to_keystore_dict(b'password', id=custom_uuid)
+    keystore_dict_with_custom_uuid = account.to_keystore_dict(b'password', uuid=custom_uuid)
     assert 'id' in keystore_dict_with_custom_uuid
     assert keystore_dict_with_custom_uuid['id'] == str(custom_uuid)
 
-    keystore_dict_without_uuid = account.to_keystore_dict(b'password', id=None)
+    keystore_dict_without_uuid = account.to_keystore_dict(b'password', uuid=None)
     assert 'id' not in keystore_dict_without_uuid
 
 

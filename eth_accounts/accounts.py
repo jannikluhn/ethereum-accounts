@@ -201,7 +201,7 @@ class Account(object):
 
         return middleware
 
-    def to_keystore(self, f, password, expose_address=True, id=True, kdf='scrypt',
+    def to_keystore(self, f, password, expose_address=True, uuid=True, kdf='scrypt',
                     kdf_params=None, cipher='aes-128-ctr', cipher_params=None, pretty=True):
         """Export the account to a keystore file.
 
@@ -209,8 +209,8 @@ class Account(object):
         :param password: the password used to encrypt the private key
         :param expose_address: ``True`` if the keystore should include the address in unencrypted
                                form, otherwise ``False``
-        :param id: if ``True``, include a randomly generated UUID; if any truthy value, include
-                   this value as id; if falsy, omit the id
+        :param uuid: if ``True``, include a randomly generated UUID; if any truthy value, include
+                     this value as id; if falsy, omit the id
         :param kdf: the key derivation function to use
         :param kdf_params: dictionary of parameters for the KDF replacing the default ones or
                            ``None`` to not replace any
@@ -220,12 +220,12 @@ class Account(object):
         :raises: :exc:`UnsupportedKeystore` if an unkown KDF or cipher is specified
         :raises: :exc:`InvalidKeystore` if the KDF parameters are invalid
         """
-        d = self.to_keystore_dict(password, expose_address, id, kdf, kdf_params,
+        d = self.to_keystore_dict(password, expose_address, uuid, kdf, kdf_params,
                                   cipher, cipher_params)
         indent = 4 if pretty else None
         json.dump(d, f, indent=indent)
 
-    def to_keystore_dict(self, password, expose_address=True, id=True, kdf='scrypt',
+    def to_keystore_dict(self, password, expose_address=True, uuid=True, kdf='scrypt',
                          kdf_params=None, cipher='aes-128-ctr', cipher_params=None):
         """Export the account to a dictionary representing a keystore.
 
@@ -265,11 +265,11 @@ class Account(object):
         if expose_address:
             keystore_dict['address'] = remove_0x_prefix(self.address).lower()
 
-        if id is True:
+        if uuid is True:
             keystore_dict['id'] = str(uuid4())
             # TODO: find out correct format, should include timestamp
-        elif id:
-            keystore_dict['id'] = str(id)
+        elif uuid:  # something truthy, but not `True`
+            keystore_dict['id'] = str(uuid)
 
         try:
             validate_keystore(keystore_dict)
@@ -300,7 +300,7 @@ class KeystoreAccount(Account):
             return None
 
     @property
-    def id(self):
+    def uuid(self):
         """The ID included in the keystore or ``None`` if there is none."""
         try:
             return self.keystore_dict['id']
