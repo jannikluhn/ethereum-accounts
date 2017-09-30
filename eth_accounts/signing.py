@@ -54,8 +54,18 @@ def recover_signer(signature, message, hash=True):
     message = normalize_message(message)
     if hash:
         message = keccak(message)
-    public_key_object = PublicKey.from_signature_and_message(decode_hex(signature), message,
-                                                             hasher=None)
+    try:
+        public_key_object = PublicKey.from_signature_and_message(
+            decode_hex(signature),
+            message,
+            hasher=None
+        )
+    except Exception as exception:
+        # coincurve doesn't raise something more specific
+        if exception.args == ('failed to recover ECDSA public key',):
+            raise ValueError('Invalid signature')
+        else:
+            raise
     return public_key_to_address(public_key_object.format(compressed=False))
 
 
@@ -125,9 +135,5 @@ def recover_sender(transaction, network_id):
         raise ValueError('Invalid signature')
     try:
         return recover_signer(signature, message)
-    except Exception as exception:
-        # coincurve doesn't raise something more specific
-        if exception.args == ('failed to recover ECDSA public key',):
-            raise ValueError('Invalid signature or wrong network id')
-        else:
-            raise
+    except ValueError:
+        raise ValueError('Invalid signature or wrong network id')

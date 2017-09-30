@@ -74,7 +74,7 @@ def test_sign_transaction(account):
     assert (v, r, s) != (tx.v, tx.r, tx.s)
 
 
-def test_invalid_signatures(account):
+def test_invalid_tx_signatures(account):
     txs = [rlp.decode(decode_hex(rlp_data), Transaction) for rlp_data in [
         # ttFrontier
         '0xf865030182520894b94f5374fce5edbc8e2a8697c15331677e6ebf0b0a825544847fffffffa098ff92120155'
