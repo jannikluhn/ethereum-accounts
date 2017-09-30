@@ -2,16 +2,16 @@ Web3 Integration
 ================
 
 Typically, accounts are managed by Ethereum clients such as Geth and Parity. Transaction templates
-are sent to them via RPC calls (``eth_sendTransaction``), where they are signed them distributed to
-the network. However, often this is not desired, especially if the client is remote and cannot be
-trusted (e.g., Infura's publicly accessible nodes).
+are sent to them via RPC calls (``eth_sendTransaction``), where they are signed and subsequently
+distributed to the network. However, often this is not desired, especially if the client is remote
+and cannot be trusted (e.g., Infura's publicly accessible nodes).
 
 As an alternative, transactions can be created and signed locally and then sent via
-``eth_sendRawTransaction``. To simplify this progress significantly, this package provides
-middleware to `web3.py <https://github.com/pipermerriam/web3.py>`_, the canonical Python package
-for communication with Ethereum nodes.
+``eth_sendRawTransaction``. To simplify this progress, this package provides middleware for
+`web3.py <https://github.com/pipermerriam/web3.py>`_, the canonical Python package for
+communication with Ethereum nodes.
 
-First, the middleware has to be registered:
+In order to use this feature, the middleware has to be registered first:
 
     >>> from web3 import Web3
     >>> web3 = Web3(Web3.RPCProvider())
